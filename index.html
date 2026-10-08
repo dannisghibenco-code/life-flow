@@ -1,0 +1,3345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Life Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e11;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --surface3: #26262f;
+    --border: #2a2a35;
+    --text: #e8e8f0;
+    --text2: #8888a0;
+    --text3: #55555f;
+    --accent: #7c6aff;
+    --accent2: #a594ff;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Manrope', sans-serif; font-size: 15px; overflow: hidden; }
+
+  /* ── LAYOUT ── */
+  #app { height: 100vh; display: flex; flex-direction: column; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 18px 20px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; transition: all .2s; flex-shrink: 0;
+  }
+  .back-btn:hover { background: var(--surface3); color: var(--text); }
+  .header-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; }
+  .header-actions { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; transition: all .2s;
+  }
+  .icon-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── SUGGESTION BANNER ── */
+  #suggestion-bar {
+    margin: 14px 16px 0;
+    background: linear-gradient(135deg, #1a1730 0%, #1c1a2e 100%);
+    border: 1px solid #3a2f6a;
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    display: flex; align-items: flex-start; gap: 10px;
+    flex-shrink: 0;
+    transition: opacity .3s;
+  }
+  #suggestion-bar.hidden { display: none; }
+  .suggestion-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .suggestion-text { flex: 1; }
+  .suggestion-label { font-size: 11px; font-weight: 600; letter-spacing: .8px; color: var(--accent2); text-transform: uppercase; margin-bottom: 3px; }
+  .suggestion-main { font-size: 13px; color: var(--text); line-height: 1.4; }
+  .suggestion-main strong { color: var(--accent2); }
+
+  /* ── BREADCRUMB ── */
+  #breadcrumb {
+    padding: 10px 16px 0;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  #breadcrumb.hidden { display: none; }
+  .crumb { font-size: 12px; color: var(--text3); cursor: pointer; transition: color .2s; white-space: nowrap; }
+  .crumb:hover { color: var(--text2); }
+  .crumb-sep { font-size: 11px; color: var(--text3); }
+  .crumb-current { font-size: 12px; color: var(--text2); font-weight: 600; }
+
+  /* ── SCROLLABLE CONTENT ── */
+  #content {
+    flex: 1; overflow-y: auto; padding: 12px 16px 100px;
+    -webkit-overflow-scrolling: touch;
+  }
+  #content::-webkit-scrollbar { width: 4px; }
+  #content::-webkit-scrollbar-track { background: transparent; }
+  #content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 14px 12px;
+    margin-bottom: 10px;
+    cursor: default;
+    transition: transform .15s, box-shadow .15s, border-color .15s, opacity .15s;
+    position: relative;
+    user-select: none;
+  }
+  .card.done-today {
+    border-color: #2a5a2a;
+    background: linear-gradient(135deg, #0e1a0e 0%, #111a11 100%);
+  }
+  .card.done-today .card-name { color: #8adf8a; }
+  .card.done-today .drag-handle { color: #3a6a3a; }
+
+  @keyframes doneFlash {
+    0%   { box-shadow: 0 0 0 0 rgba(100,220,100,0.7); border-color: #4adf4a; }
+    50%  { box-shadow: 0 0 0 12px rgba(100,220,100,0); border-color: #2a5a2a; }
+    100% { box-shadow: 0 0 0 0 rgba(100,220,100,0); border-color: #2a5a2a; }
+  }
+  .card.done-flash { animation: doneFlash .6s ease-out; }
+
+  .done-check { font-size: 13px; color: #6bdf6b; margin-left: 4px; font-weight: 700; }
+  .card.dragging { opacity: .4; transform: scale(.97); }
+  .card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+  .card-top { display: flex; align-items: flex-start; gap: 10px; }
+  .drag-handle { color: var(--text3); font-size: 16px; flex-shrink: 0; margin-top: 2px; cursor: grab; padding: 4px 6px; border-radius: 6px; touch-action: none; }
+  .drag-handle:hover { color: var(--text2); background: var(--surface3); }
+  .drag-handle:active { cursor: grabbing; }
+  .card-body { flex: 1; min-width: 0; }
+  .card-name { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 16px; letter-spacing: -0.2px; line-height: 1.2; word-break: break-word; }
+  .card-meta { display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+  .freq-badge {
+    font-size: 11px; font-weight: 600; letter-spacing: .4px;
+    padding: 2px 8px; border-radius: 20px;
+    border: 1px solid currentColor;
+    opacity: .85;
+  }
+  .days-ago { font-size: 12px; color: var(--text3); }
+  .days-ago.urgent { color: #ff7070; }
+  .days-ago.warn { color: #ffa040; }
+
+  .card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .card-btn {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all .15s; flex-shrink: 0;
+  }
+  .card-btn:hover { background: var(--surface3); color: var(--text); }
+  .card-btn.open-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .card-btn.done-btn:hover { background: #2a4a2a; border-color: #3a6a3a; color: #6adf6a; }
+
+  .card-note-preview {
+    margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text3); line-height: 1.5;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .child-count {
+    font-size: 11px; color: var(--text3); margin-top: 4px;
+  }
+  .child-count span { color: var(--accent2); font-weight: 600; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center; padding: 50px 20px;
+    color: var(--text3);
+  }
+  .empty-state .emoji { font-size: 48px; margin-bottom: 14px; }
+  .empty-state p { font-size: 14px; line-height: 1.6; }
+
+  /* ── FAB ── */
+  #fab {
+    position: fixed; bottom: 28px; right: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent); border: none;
+    color: #fff; font-size: 26px; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(124,106,255,.4);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .2s, box-shadow .2s;
+    z-index: 100;
+  }
+  #fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(124,106,255,.5); }
+  #fab:active { transform: scale(.95); }
+
+  /* ── MODAL OVERLAY ── */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7);
+    display: flex; align-items: flex-end; justify-content: center;
+    z-index: 200; opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .sheet {
+    background: var(--surface); border-radius: 24px 24px 0 0;
+    width: 100%; max-width: 600px; padding: 20px 20px 40px;
+    transform: translateY(30px); transition: transform .25s;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .overlay.open .sheet { transform: translateY(0); }
+  .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 18px; }
+  .sheet-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 18px; }
+
+  label { display: block; font-size: 12px; font-weight: 600; letter-spacing: .5px; color: var(--text2); text-transform: uppercase; margin-bottom: 6px; }
+  input[type=text], textarea, select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text); font-family: 'Manrope', sans-serif; font-size: 15px;
+    padding: 11px 13px; outline: none; transition: border-color .15s;
+    -webkit-appearance: none;
+  }
+  input[type=text]:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+  select option { background: var(--surface2); }
+  .form-group { margin-bottom: 16px; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+  .btn {
+    flex: 1; padding: 13px; border-radius: var(--radius-sm); border: none;
+    font-family: 'Manrope', sans-serif; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-secondary { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--surface3); color: var(--text); }
+  .btn-danger { background: #3a1a1a; color: #ff7070; border: 1px solid #5a2020; }
+  .btn-danger:hover { background: #4a2020; }
+
+  /* ── NOTES SYSTEM ── */
+  /* Notes count badge on card */
+  .notes-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--text3); margin-top: 4px;
+  }
+  .notes-badge .nb-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); opacity: .7; }
+
+  /* Notes list screen (full overlay) */
+  #notes-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    z-index: 150; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform .25s ease;
+  }
+  #notes-screen.open { transform: translateX(0); }
+  #notes-screen header { padding: 16px 16px 12px; }
+
+  .notes-toolbar {
+    padding: 10px 16px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .notes-sort-btn {
+    font-size: 12px; font-weight: 600; color: var(--text3);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 12px; cursor: pointer; transition: all .15s;
+  }
+  .notes-sort-btn.active { color: var(--accent2); border-color: var(--accent); }
+
+  #notes-list { flex: 1; overflow-y: auto; padding: 12px 16px 100px; }
+  #notes-list::-webkit-scrollbar { width: 4px; }
+  #notes-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .note-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; margin-bottom: 10px; cursor: pointer;
+    transition: border-color .15s;
+  }
+  .note-card:hover { border-color: var(--accent); }
+  .note-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+  .note-card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; flex: 1; }
+  .note-card-title.untitled { color: var(--text3); font-style: italic; font-weight: 400; }
+  .note-card-date { font-size: 11px; color: var(--text3); white-space: nowrap; }
+  .note-card-preview { font-size: 13px; color: var(--text2); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .note-card-del {
+    width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0;
+    background: transparent; border: 1px solid transparent;
+    color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;
+    transition: all .15s;
+  }
+  .note-card-del:hover { background: #3a1a1a; border-color: #5a2020; color: #ff7070; }
+
+  /* Note editor (full screen) */
+  #note-editor {
+    position: fixed; inset: 0; background: var(--bg);
+    z-index: 160; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform .25s ease;
+  }
+  #note-editor.open { transform: translateX(0); }
+  #note-editor header { padding: 16px 16px 12px; }
+
+  /* Formatting toolbar */
+  .fmt-toolbar {
+    display: flex; gap: 4px; padding: 8px 12px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; flex-shrink: 0;
+  }
+  .fmt-btn {
+    min-width: 32px; height: 32px; border-radius: 6px; padding: 0 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); cursor: pointer; font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s; white-space: nowrap;
+  }
+  .fmt-btn:hover { background: var(--surface3); color: var(--text); }
+  .fmt-btn:active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  #note-title-input {
+    width: 100%; background: transparent; border: none; border-bottom: 1px solid var(--border);
+    color: var(--text); font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700;
+    padding: 14px 16px; outline: none;
+  }
+  #note-title-input::placeholder { color: var(--text3); }
+
+  #note-body-editor {
+    flex: 1; width: 100%; background: transparent; border: none;
+    color: var(--text); font-family: 'Manrope', sans-serif; font-size: 15px; line-height: 1.7;
+    padding: 14px 16px; outline: none;
+    -webkit-overflow-scrolling: touch; overflow-y: auto;
+    cursor: text;
+  }
+  #note-body-editor:empty:before {
+    content: attr(placeholder); color: var(--text3); pointer-events: none;
+  }
+  /* Rich text styles inside editor and preview */
+  #note-body-editor h1, .note-rich h1 { font-family:'Syne',sans-serif; font-weight:800; font-size:1.4em; margin:.6em 0 .3em; color:var(--text); }
+  #note-body-editor h2, .note-rich h2 { font-family:'Syne',sans-serif; font-weight:700; font-size:1.15em; margin:.5em 0 .2em; color:var(--text); }
+  #note-body-editor h3, .note-rich h3 { font-family:'Syne',sans-serif; font-weight:600; font-size:1em; margin:.4em 0 .2em; color:var(--text2); }
+  #note-body-editor strong, .note-rich strong { font-weight:700; color:var(--text); }
+  #note-body-editor em, .note-rich em { font-style:italic; color:var(--text2); }
+  #note-body-editor s, .note-rich s { opacity:.6; }
+  #note-body-editor ul, .note-rich ul { padding-left:1.4em; margin:.3em 0; list-style:disc; }
+  #note-body-editor ol, .note-rich ol { padding-left:1.4em; margin:.3em 0; list-style:decimal; }
+  #note-body-editor li, .note-rich li { margin:.2em 0; }
+  #note-body-editor p, .note-rich p { margin:.3em 0; }
+  #note-body-editor hr, .note-rich hr { border:none; border-top:1px solid var(--border); margin:1em 0; }
+  #note-body-editor a, .note-rich a { color:var(--accent2); text-decoration:underline; }
+  #note-body-editor blockquote, .note-rich blockquote { border-left:3px solid var(--accent); padding-left:12px; color:var(--text2); margin:.5em 0; }
+
+  /* Rendered markdown preview inside note-card-preview */
+  .md-preview h1,.md-preview h2,.md-preview h3 { font-family:'Syne',sans-serif; font-weight:700; margin:.5em 0 .2em; color: var(--text); }
+  .md-preview h1 { font-size:1.2em; } .md-preview h2 { font-size:1.1em; } .md-preview h3 { font-size:1em; }
+  .md-preview strong { color: var(--text); font-weight:700; }
+  .md-preview em { font-style:italic; color: var(--text2); }
+  .md-preview ul,.md-preview ol { padding-left:1.4em; margin:.3em 0; }
+  .md-preview li { margin:.2em 0; }
+  .md-preview code { background:var(--surface3); border-radius:4px; padding:1px 5px; font-size:.9em; }
+  .md-preview p { margin:.3em 0; }
+
+  /* ── SETTINGS / FREQUENCY ── */
+  .freq-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .freq-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+  }
+  .freq-color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .freq-item-name { flex: 1; font-size: 14px; }
+  .freq-item-actions { display: flex; gap: 6px; }
+  .freq-item-btn {
+    width: 26px; height: 26px; border-radius: 6px;
+    background: var(--surface3); border: 1px solid var(--border);
+    color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px;
+    transition: all .15s;
+  }
+  .freq-item-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .freq-item-btn.del:hover { background: #3a1a1a; border-color: #5a2020; color: #ff7070; }
+
+  .color-input-row { display: flex; gap: 8px; align-items: center; }
+  input[type=color] { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border); padding: 2px; background: var(--surface2); cursor: pointer; flex-shrink: 0; }
+
+  /* ── DETAIL SCREEN ── */
+  #detail-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    z-index: 145; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform .25s ease;
+  }
+  #detail-screen.open { transform: translateX(0); }
+  #detail-screen header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  #detail-content { flex: 1; overflow-y: auto; padding: 16px 16px 80px; }
+
+  .stats-card { cursor: pointer; }
+  .stats-card:hover { border-color: var(--accent); }
+  .stats-card .arrow { font-size: 14px; color: var(--text3); flex-shrink: 0; }
+
+  /* Session history list */
+  .session-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 8px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background .15s; border-radius: 6px; margin: 0 -8px;
+  }
+  .session-item:last-child { border-bottom: none; }
+  .session-item:hover { background: var(--surface2); }
+  .session-item.has-note {
+    background: linear-gradient(135deg, #16161f 0%, #181624 100%);
+    border-left: 2px solid var(--accent);
+    padding-left: 10px;
+    margin-left: -10px;
+  }
+  .session-item.has-note:hover { background: #1e1c2e; }
+  .session-date { font-size: 12px; color: var(--text3); white-space: nowrap; min-width: 70px; margin-top: 2px; }
+  .session-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .session-body { flex: 1; }
+  .session-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .session-time { font-size: 13px; color: var(--accent2); font-weight: 700; white-space: nowrap; }
+  .session-note { font-size: 12px; color: var(--text3); margin-top: 4px; line-height: 1.4; }
+
+
+  #dashboard-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    z-index: 140; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform .25s ease;
+  }
+  #dashboard-screen.open { transform: translateX(0); }
+  #dashboard-screen header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  #dashboard-content { flex: 1; overflow-y: auto; padding: 16px 16px 80px; }
+  #dashboard-content::-webkit-scrollbar { width: 4px; }
+  #dashboard-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .dash-period-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+  .dash-period-btn {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text3);
+    cursor: pointer; transition: all .15s;
+  }
+  .dash-period-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .dash-section-title {
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px;
+    margin: 20px 0 10px; color: var(--text2);
+  }
+
+  /* Bar chart */
+  .bar-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bar-label { font-size: 13px; color: var(--text); min-width: 130px; max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; height: 8px; background: var(--surface3); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width .4s ease; }
+  .bar-value { font-size: 12px; color: var(--text3); min-width: 55px; text-align: right; }
+
+  /* Stats table */
+  .stats-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 14px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .stats-name { flex: 1; font-size: 14px; font-weight: 600; min-width: 0; word-break: break-word; }
+  .stats-nums { display: flex; gap: 16px; flex-shrink: 0; }
+  .stats-num { text-align: center; }
+  .stats-num-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; color: var(--accent2); }
+  .stats-num-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .4px; }
+
+  /* Calendar heatmap */
+  .calendar-wrap { overflow-x: auto; padding-bottom: 8px; }
+  .calendar-grid { display: flex; gap: 3px; }
+  .cal-col { display: flex; flex-direction: column; gap: 3px; }
+  .cal-cell {
+    width: 13px; height: 13px; border-radius: 3px;
+    background: var(--surface3); cursor: default; flex-shrink: 0;
+    transition: transform .1s;
+  }
+  .cal-cell:hover { transform: scale(1.3); z-index: 1; }
+  .cal-month-labels { display: flex; gap: 3px; margin-bottom: 4px; }
+  .cal-month-lbl { font-size: 10px; color: var(--text3); }
+
+  /* Custom date range */
+  .date-range-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  .date-range-row input[type=date] { flex: 1; min-width: 130px; }
+
+  .dash-empty { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 14px; }
+
+
+  #page-editor {
+    position: fixed; inset: 0; background: var(--bg);
+    z-index: 165; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform .25s ease;
+  }
+  #page-editor.open { transform: translateX(0); }
+  #page-editor header { padding: 16px 16px 12px; }
+  #page-body-input { display: none; }
+  #page-body-editor {
+    flex: 1; width: 100%; background: transparent; border: none;
+    color: var(--text); font-family: 'Manrope', sans-serif; font-size: 15px; line-height: 1.7;
+    padding: 14px 16px; outline: none;
+    -webkit-overflow-scrolling: touch; overflow-y: auto; cursor: text;
+  }
+  #page-body-editor:empty:before { content: attr(placeholder); color: var(--text3); pointer-events: none; }
+  /* Rich text styles shared */
+  #page-body-editor h1, #page-body-editor h2, #page-body-editor h3 { font-family:'Syne',sans-serif; font-weight:700; margin:.5em 0 .2em; color:var(--text); }
+  #page-body-editor h1 { font-size:1.4em; font-weight:800; }
+  #page-body-editor h2 { font-size:1.15em; }
+  #page-body-editor strong { font-weight:700; color:var(--text); }
+  #page-body-editor em { font-style:italic; color:var(--text2); }
+  #page-body-editor ul, #page-body-editor ol { padding-left:1.4em; margin:.3em 0; }
+  #page-body-editor ul { list-style:disc; }
+  #page-body-editor ol { list-style:decimal; }
+  #page-body-editor li { margin:.2em 0; }
+  #page-body-editor hr { border:none; border-top:1px solid var(--border); margin:1em 0; }
+  #page-body-editor blockquote { border-left:3px solid var(--accent); padding-left:12px; color:var(--text2); margin:.5em 0; }
+  .page-has-content { color: var(--accent2) !important; border-color: var(--accent) !important; }
+
+
+  .pri-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 12px; border-radius: var(--radius-sm);
+    border: 2px solid var(--border); background: var(--surface2);
+    cursor: pointer; transition: all .15s; min-width: 52px;
+    color: var(--text3);
+  }
+  .pri-btn .pri-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; line-height: 1; }
+  .pri-btn .pri-name { font-size: 10px; font-weight: 600; letter-spacing: .3px; white-space: nowrap; }
+  .pri-btn.selected { background: var(--surface3); }
+
+  /* ── TEMPLATES ── */
+  #templates-screen, #template-editor-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    z-index: 162; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform .25s ease;
+  }
+  #templates-screen.open, #template-editor-screen.open { transform: translateX(0); }
+  #templates-screen header, #template-editor-screen header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  #template-name-input {
+    width: 100%; background: transparent; border: none; border-bottom: 1px solid var(--border);
+    color: var(--text); font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700;
+    padding: 14px 16px; outline: none;
+  }
+  #template-name-input::placeholder { color: var(--text3); }
+  #template-body-editor {
+    flex: 1; width: 100%; background: transparent; border: none;
+    color: var(--text); font-family: 'Manrope', sans-serif; font-size: 15px; line-height: 1.7;
+    padding: 14px 16px; outline: none; overflow-y: auto; cursor: text;
+  }
+  #template-body-editor:empty:before { content: attr(placeholder); color: var(--text3); pointer-events: none; white-space: pre-wrap; }
+  #template-body-editor h1, #template-body-editor h2 { font-family:'Syne',sans-serif; font-weight:700; margin:.5em 0 .2em; }
+  #template-body-editor h1 { font-size:1.3em; } #template-body-editor h2 { font-size:1.1em; }
+  #template-body-editor ul, #template-body-editor ol { padding-left:1.4em; margin:.3em 0; }
+  #template-body-editor ul { list-style:disc; } #template-body-editor ol { list-style:decimal; }
+  #template-body-editor hr { border:none; border-top:1px solid var(--border); margin:1em 0; }
+  .tpl-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px; }
+  .tpl-card-head { display:flex;align-items:center;gap:10px; }
+  .tpl-card-name { flex:1;font-family:'Syne',sans-serif;font-weight:700;font-size:15px; }
+  .tpl-card-preview { font-size:12px;color:var(--text3);margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
+  .tpl-actions { display:flex;gap:6px;flex-shrink:0; }
+  .tpl-picker-item { display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);cursor:pointer;margin-bottom:8px;transition:all .15s; }
+  .tpl-picker-item:hover { border-color:var(--accent);background:var(--surface3); }
+  .tpl-picker-name { font-family:'Syne',sans-serif;font-weight:700;font-size:14px;flex:1; }
+  .tpl-picker-preview { font-size:11px;color:var(--text3);margin-top:2px; }
+  .tpl-has-templates { color:var(--accent2) !important;border-color:var(--accent) !important; }
+
+  /* ── SUGGESTION LIST ── */
+  .sq-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .sq-item:last-child { border-bottom: none; }
+  .sq-rank { font-family:'Syne',sans-serif; font-weight:800; font-size:18px; color:var(--text3); min-width:28px; text-align:center; flex-shrink:0; }
+  .sq-rank.top { color: var(--accent2); }
+  .sq-body { flex:1; min-width:0; }
+  .sq-name { font-size:15px; font-weight:600; color:var(--text); }
+  .sq-meta { font-size:12px; color:var(--text3); margin-top:2px; }
+  .sq-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; border:1px solid currentColor; flex-shrink:0; }
+
+  /* ── CATEGORIES ── */
+  .cat-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 20px;
+    border: 2px solid var(--border); background: var(--surface2);
+    cursor: pointer; transition: all .15s; font-size: 13px; font-weight: 600;
+    color: var(--text3);
+  }
+  .cat-btn.selected { background: var(--surface3); }
+  .cat-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 700; padding: 2px 8px;
+    border-radius: 20px; border: 1px solid currentColor;
+  }
+  .cat-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 8px;
+  }
+  .cat-icon { font-size: 18px; flex-shrink: 0; }
+  .cat-item-name { flex: 1; font-size: 14px; }
+
+  /* ── DONE CONFIRM ── */
+  .done-info { 
+    background: var(--surface2); border-radius: var(--radius-sm); 
+    padding: 12px; margin-bottom: 16px;
+    font-size: 13px; color: var(--text2); line-height: 1.5;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (min-width: 480px) {
+    .sheet { border-radius: 24px; margin: 20px; width: calc(100% - 40px); }
+    .overlay { align-items: center; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="header-left">
+      <button class="back-btn hidden" id="back-btn" title="Назад">←</button>
+      <div id="header-title" style="display:flex;align-items:center;gap:6px;cursor:pointer;" onclick="if(!pathIds.length) openWsOverlay()" title="Переключить пространство">
+        <span class="header-title" id="ws-name-label">Life Flow</span>
+        <span id="ws-chevron" style="font-size:11px;color:var(--text3);transition:.2s;">▾</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="dashboard-btn" title="Аналитика">📊</button>
+      <button class="icon-btn" id="sync-btn" title="Экспорт / Импорт данных">⇅</button>
+      <button class="icon-btn" id="settings-btn" title="Уровни приоритетов">⚙</button>
+    </div>
+  </header>
+
+  <div id="suggestion-bar" style="cursor:pointer;" onclick="openSuggestionList()">
+    <div class="suggestion-icon">💡</div>
+    <div class="suggestion-text">
+      <div class="suggestion-label">Совет на сегодня · нажми чтобы увидеть всё</div>
+      <div class="suggestion-main" id="suggestion-text">Добавь свои активности, чтобы начать</div>
+    </div>
+    <div style="font-size:18px;color:var(--accent);flex-shrink:0;">›</div>
+  </div>
+
+  <!-- BACKUP REMINDER BANNER (inside #app) -->
+  <div id="backup-reminder-bar" style="display:none;margin:10px 16px 0;background:linear-gradient(135deg,#2a1a0e,#241810);border:1px solid #5a3a20;border-radius:var(--radius);padding:12px 14px;flex-shrink:0;">
+    <div style="font-size:12px;font-weight:600;color:#e09050;margin-bottom:4px;">⚠️ Данные давно не сохранялись</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;" id="backup-reminder-text"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-primary" id="reminder-export-btn" style="font-size:12px;padding:7px 14px;">⬇ Скачать .json</button>
+      <button class="btn btn-secondary" id="reminder-gist-btn" style="font-size:12px;padding:7px 14px;">☁️ Бэкап в Gist</button>
+      <button class="btn btn-secondary" id="reminder-snooze-btn" style="font-size:12px;padding:7px 14px;">⏰ +3 дня</button>
+      <button id="reminder-dismiss-btn" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;margin-left:auto;" title="Скрыть">×</button>
+    </div>
+  </div>
+
+  <div id="breadcrumb" class="hidden"></div>
+
+  <div id="content">
+    <div class="empty-state" id="empty-state">
+      <div class="emoji">🌱</div>
+      <p>Добавь свою первую область<br>развития, нажав на <strong>+</strong></p>
+    </div>
+    <div id="cards-list"></div>
+  </div>
+</div>
+
+<button id="fab">+</button>
+
+<!-- ADD/EDIT MODAL -->
+<div class="overlay" id="edit-overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="edit-title">Новая активность</div>
+    <div class="form-group">
+      <label>Название</label>
+      <input type="text" id="edit-name" placeholder="Например: Румынский язык">
+    </div>
+    <div class="form-group">
+      <label>Приоритет <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(1 = самый важный)</span></label>
+      <div id="priority-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:2px;"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+        <span style="font-size:12px;color:var(--text3);white-space:nowrap;">Свой номер:</span>
+        <input type="number" id="priority-input" min="1" step="1" placeholder="Например: 7"
+          style="width:90px;padding:7px 10px;font-size:14px;">
+      </div>
+      <div id="priority-desc" style="font-size:12px;color:var(--text3);margin-top:6px;"></div>
+    </div>
+    <div class="form-group">
+      <label>Категория <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(необязательно)</span></label>
+      <div id="category-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:2px;"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="edit-cancel">Отмена</button>
+      <button class="btn btn-primary" id="edit-save">Сохранить</button>
+    </div>
+    <div class="btn-row" id="delete-row" style="display:none; margin-top:8px;">
+      <button class="btn btn-secondary" id="edit-pause" style="flex:1;">⏸ На паузу</button>
+      <button class="btn btn-danger" id="edit-delete" style="flex:1;">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTES LIST SCREEN -->
+<div id="notes-screen">
+  <header>
+    <div class="header-left">
+      <button class="back-btn" id="notes-back-btn">←</button>
+      <div class="header-title" id="notes-screen-title">Заметки</div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="rules-btn" title="Правила работы" style="font-size:13px;font-weight:700;width:auto;padding:0 10px;border-radius:20px;">📋</button>
+      <button class="icon-btn" id="motivation-btn" title="Мотивация" style="font-size:13px;font-weight:700;width:auto;padding:0 10px;border-radius:20px;">💡</button>
+      <button class="icon-btn" id="templates-btn" title="Шаблоны заметок" style="font-size:13px;font-weight:700;width:auto;padding:0 10px;border-radius:20px;">📄</button>
+      <button class="icon-btn" id="notes-add-btn" title="Новая заметка">+</button>
+    </div>
+  </header>
+  <div class="notes-toolbar">
+    <span style="font-size:12px;color:var(--text3);margin-right:4px;">Сортировка:</span>
+    <button class="notes-sort-btn active" id="sort-new-btn">Новые</button>
+    <button class="notes-sort-btn" id="sort-old-btn">Старые</button>
+    <button class="notes-sort-btn" id="sort-az-btn">А–Я</button>
+  </div>
+  <div id="notes-list">
+    <div class="empty-state" id="notes-empty">
+      <div class="emoji">📝</div>
+      <p>Заметок пока нет.<br>Нажми <strong>+</strong> чтобы создать первую.</p>
+    </div>
+  </div>
+</div>
+
+<!-- TEMPLATES MANAGER SCREEN -->
+<div id="templates-screen">
+  <header>
+    <div class="header-left">
+      <button class="back-btn" id="templates-back-btn">←</button>
+      <div class="header-title" id="templates-screen-title">Шаблоны</div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="template-add-btn" title="Новый шаблон">+</button>
+    </div>
+  </header>
+  <div id="templates-list-content" style="flex:1;overflow-y:auto;padding:12px 16px 80px;"></div>
+</div>
+
+<!-- TEMPLATE EDITOR SCREEN -->
+<div id="template-editor-screen">
+  <header>
+    <div class="header-left">
+      <button class="back-btn" id="template-editor-back-btn">←</button>
+      <div class="header-title" id="template-editor-title">Новый шаблон</div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="template-editor-save-btn" title="Сохранить" style="font-size:18px;">✓</button>
+    </div>
+  </header>
+  <div class="fmt-toolbar">
+    <button class="fmt-btn" data-tpl-fmt="bold"><b>B</b></button>
+    <button class="fmt-btn" data-tpl-fmt="italic"><i>I</i></button>
+    <button class="fmt-btn" data-tpl-fmt="h1">H1</button>
+    <button class="fmt-btn" data-tpl-fmt="h2">H2</button>
+    <button class="fmt-btn" data-tpl-fmt="ul">• —</button>
+    <button class="fmt-btn" data-tpl-fmt="ol">1.</button>
+    <button class="fmt-btn" data-tpl-fmt="hr">—</button>
+  </div>
+  <input type="text" id="template-name-input" placeholder="Название шаблона (например: После сессии гитары)">
+  <div id="template-body-editor" contenteditable="true" spellcheck="true" placeholder="Структура заметки… Например:&#10;&#10;Что практиковал?&#10;&#10;Что получилось?&#10;&#10;Что улучшить?"></div>
+</div>
+
+<!-- TEMPLATE PICKER OVERLAY -->
+<div class="overlay" id="template-picker-overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Выбери шаблон</div>
+    <div id="template-picker-list" style="max-height:50vh;overflow-y:auto;margin-bottom:12px;"></div>
+    <button class="btn btn-secondary" style="width:100%;margin-bottom:8px;" id="template-picker-skip">Без шаблона</button>
+    <button class="btn btn-secondary" id="template-picker-cancel">Отмена</button>
+  </div>
+</div>
+
+<!-- STATIC PAGE EDITOR (Rules / Motivation) -->
+<div id="page-editor">
+  <header>
+    <div class="header-left">
+      <button class="back-btn" id="page-back-btn">←</button>
+      <div class="header-title" id="page-editor-title">Правила работы</div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="page-save-btn" title="Сохранить" style="font-size:18px;">✓</button>
+    </div>
+  </header>
+  <div class="fmt-toolbar">
+    <button class="fmt-btn" data-page-fmt="bold"><b>B</b></button>
+    <button class="fmt-btn" data-page-fmt="italic"><i>I</i></button>
+    <button class="fmt-btn" data-page-fmt="h1">H1</button>
+    <button class="fmt-btn" data-page-fmt="h2">H2</button>
+    <button class="fmt-btn" data-page-fmt="ul">• —</button>
+    <button class="fmt-btn" data-page-fmt="ol">1.</button>
+    <button class="fmt-btn" data-page-fmt="code">&lt;/&gt;</button>
+    <button class="fmt-btn" data-page-fmt="hr">—</button>
+  </div>
+  <textarea id="page-body-input" placeholder="Напиши здесь..." style="display:none;"></textarea>
+  <div id="page-body-editor" contenteditable="true" spellcheck="true" placeholder="Напиши здесь или вставляй текст из любого источника…"></div>
+</div>
+
+<!-- NOTE EDITOR SCREEN -->
+<div id="note-editor">
+  <header>
+    <div class="header-left">
+      <button class="back-btn" id="editor-back-btn">←</button>
+      <div class="header-title" id="editor-header-title">Заметка</div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="editor-save-btn" title="Сохранить" style="font-size:18px;">✓</button>
+    </div>
+  </header>
+  <div class="fmt-toolbar">
+    <button class="fmt-btn" data-cmd="bold"><b>B</b></button>
+    <button class="fmt-btn" data-cmd="italic"><i>I</i></button>
+    <button class="fmt-btn" data-cmd="h1">H1</button>
+    <button class="fmt-btn" data-cmd="h2">H2</button>
+    <button class="fmt-btn" data-cmd="ul">• —</button>
+    <button class="fmt-btn" data-cmd="ol">1.</button>
+    <button class="fmt-btn" data-cmd="strike"><s>S</s></button>
+    <button class="fmt-btn" data-cmd="hr">—</button>
+  </div>
+  <input type="text" id="note-title-input" placeholder="Заголовок заметки…">
+  <div id="note-body-editor" contenteditable="true" spellcheck="true" placeholder="Пиши здесь или вставляй текст из любого источника…"></div>
+</div>
+
+<!-- DONE MODAL -->
+<div class="overlay" id="done-overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Засчитать занятие?</div>
+    <div class="done-info" id="done-info"></div>
+    <div class="form-group">
+      <label>Дата занятия</label>
+      <input type="date" id="done-date" style="width:100%;">
+    </div>
+    <div class="form-group">
+      <label>Продолжительность (необязательно)</label>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;display:flex;align-items:center;gap:6px;">
+          <input type="number" id="done-hours" min="0" max="23" placeholder="0" style="width:100%;text-align:center;font-size:18px;font-weight:700;padding:10px;">
+          <span style="font-size:13px;color:var(--text3);white-space:nowrap;">ч</span>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;gap:6px;">
+          <input type="number" id="done-minutes" min="0" max="59" placeholder="0" style="width:100%;text-align:center;font-size:18px;font-weight:700;padding:10px;">
+          <span style="font-size:13px;color:var(--text3);white-space:nowrap;">мин</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <button class="btn btn-secondary" id="done-add-note-btn" style="width:100%;text-align:left;display:flex;align-items:center;gap:8px;">
+        <span>📝</span><span id="done-note-label">Добавить заметку (необязательно)</span>
+      </button>
+    </div>
+    <div class="btn-row" style="margin-bottom:8px;">
+      <button class="btn btn-secondary" id="done-cancel">Отмена</button>
+      <button class="btn btn-primary" id="done-confirm-single">✓ Только эта</button>
+    </div>
+    <button class="btn btn-primary" id="done-confirm-all" style="width:100%;background:var(--surface3);border:1px solid var(--accent);color:var(--accent2);">✓✓ Эта + все родители</button>
+  </div>
+</div>
+
+<!-- UNDO CHOICE MODAL -->
+<div class="overlay" id="undo-choice-overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Отменить отметку?</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px;">
+      <strong id="undo-choice-name"></strong>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px;">Родители: <span id="undo-choice-parents"></span></div>
+    </div>
+    <div class="btn-row" style="margin-bottom:8px;">
+      <button class="btn btn-secondary" id="undo-choice-cancel">Отмена</button>
+      <button class="btn btn-danger" id="undo-choice-single">↩ Только эта</button>
+    </div>
+    <button class="btn btn-danger" id="undo-choice-all" style="width:100%;">↩↩ Эта + все родители</button>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<!-- SYNC MODAL -->
+<div class="overlay" id="sync-overlay">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Перенос и защита данных</div>
+
+    <!-- Storage persistence status -->
+    <div id="persist-status-block" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      <span id="persist-status-icon" style="font-size:18px;">🔄</span>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);" id="persist-status-title">Проверка защиты хранилища…</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px;" id="persist-status-desc"></div>
+      </div>
+    </div>
+
+    <!-- File export/import -->
+    <div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;">Файловый перенос</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px;">
+      Скачай файл → отправь себе → на другом устройстве нажми Импорт
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="export-btn">⬇ Скачать .json</button>
+      <button class="btn btn-secondary" id="import-trigger-btn">⬆ Импорт</button>
+    </div>
+    <input type="file" id="import-file-input" accept=".json" style="display:none;">
+    <div id="import-status" style="margin-top:10px;font-size:13px;color:var(--text3);display:none;"></div>
+
+    <!-- GitHub Gist backup -->
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;">☁️ Облачный бэкап (GitHub Gist)</div>
+      <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:12px;">
+        Данные сохраняются в твой приватный Gist. Токен хранится только на этом устройстве и никогда не попадает в экспортируемый файл.<br>
+        <a href="https://github.com/settings/tokens/new?scopes=gist&description=LifeFlow+Backup" target="_blank" rel="noopener" style="color:var(--accent2);text-decoration:none;">→ Создать токен (нужна галочка gist)</a>
+      </div>
+
+      <div class="form-group" style="margin-bottom:10px;">
+        <label style="font-size:12px;color:var(--text3);">Personal Access Token</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="password" id="gist-token-input" placeholder="ghp_xxxxxxxxxxxx" style="flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text);font-size:13px;outline:none;">
+          <button id="gist-token-save" class="btn btn-secondary" style="padding:8px 14px;font-size:12px;">Сохранить</button>
+        </div>
+        <div id="gist-token-status" style="font-size:11px;color:var(--text3);margin-top:5px;"></div>
+      </div>
+
+      <div id="gist-meta-block" style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--text3);display:none;">
+        <div id="gist-last-backup-line"></div>
+        <div id="gist-id-line" style="margin-top:3px;"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="gist-backup-btn" disabled>☁️ Сделать бэкап</button>
+        <button class="btn btn-secondary" id="gist-restore-btn" disabled>⬇ Восстановить</button>
+      </div>
+      <div id="gist-status" style="margin-top:10px;font-size:13px;color:var(--text3);display:none;"></div>
+    </div>
+
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Опасная зона</div>
+      <button class="btn btn-danger" id="clear-data-btn" style="width:100%;">🗑 Очистить все данные</button>
+    </div>
+
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-secondary" id="sync-close">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- BACKUP REMINDER BANNER -->
+<!-- SUGGESTION LIST MODAL -->
+<div class="overlay" id="suggestion-list-overlay">
+  <div class="sheet" style="max-height:85vh;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Умная очередь на сегодня</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">Отсортировано по приоритетности — сверху то, чем стоит заняться в первую очередь</div>
+    <div id="suggestion-list-content"></div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-secondary" id="suggestion-list-close">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- SESSION NOTE MODAL -->
+<div class="overlay" id="session-note-overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="session-note-title"></div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px;" id="session-note-meta"></div>
+    <div style="font-size:15px;color:var(--text);line-height:1.7;white-space:pre-wrap;max-height:50vh;overflow-y:auto;" id="session-note-body"></div>
+    <div class="btn-row" style="margin-top:20px;">
+      <button class="btn btn-secondary" id="session-note-close">Закрыть</button>
+      <button class="btn btn-primary" id="session-note-open">Открыть заметку →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIVITY DETAIL SCREEN -->
+<div id="detail-screen">
+  <header>
+    <div class="header-left">
+      <button class="back-btn" id="detail-back-btn">←</button>
+      <div class="header-title" id="detail-title"></div>
+    </div>
+  </header>
+  <div id="detail-content"></div>
+</div>
+
+<!-- DASHBOARD SCREEN -->
+<div id="dashboard-screen">
+  <header>
+    <div class="header-left">
+      <button class="back-btn" id="dashboard-back-btn">←</button>
+      <div class="header-title">Аналитика</div>
+    </div>
+  </header>
+  <div id="dashboard-content"></div>
+</div>
+
+<!-- WORKSPACES MODAL -->
+<div class="overlay" id="ws-overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Рабочие пространства</div>
+    <div id="ws-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:12px;">Новое пространство</div>
+      <div class="form-group">
+        <label>Название</label>
+        <input type="text" id="new-ws-name" placeholder="Например: Работа">
+      </div>
+      <button class="btn btn-primary" id="add-ws-btn" style="width:100%;">Создать</button>
+    </div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-secondary" id="ws-close">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="settings-overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+
+    <div class="sheet-title">Уровни приоритетов</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.5;">Приоритет 1 — самый важный. Чем больше число, тем реже нужно заниматься.</div>
+    <div class="freq-list" id="freq-list"></div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-top:4px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:12px;">Новый уровень</div>
+      <div class="form-group">
+        <label>Название</label>
+        <input type="text" id="new-freq-name" placeholder="Например: Каждый день">
+      </div>
+      <div class="form-group">
+        <label>Цвет</label>
+        <div class="color-input-row">
+          <input type="color" id="new-freq-color" value="#7c6aff">
+          <input type="text" id="new-freq-color-hex" placeholder="#7c6aff" style="flex:1;">
+        </div>
+      </div>
+      <button class="btn btn-primary" id="add-freq-btn" style="width:100%;">Добавить уровень</button>
+    </div>
+
+    <div class="sheet-title" style="margin-top:24px;">Категории активностей</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.5;">Помогают балансировать нагрузку. Подсказка показывает топ из каждой категории.</div>
+    <div id="cat-list"></div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-top:4px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:12px;">Новая категория</div>
+      <div class="form-group">
+        <label>Иконка (эмодзи)</label>
+        <input type="text" id="new-cat-icon" placeholder="Например: 🎯" maxlength="4" style="width:80px;">
+      </div>
+      <div class="form-group">
+        <label>Название</label>
+        <input type="text" id="new-cat-name" placeholder="Например: Обязательные дела">
+      </div>
+      <div class="form-group">
+        <label>Цвет</label>
+        <div class="color-input-row">
+          <input type="color" id="new-cat-color" value="#7c6aff">
+          <input type="text" id="new-cat-color-hex" placeholder="#7c6aff" style="flex:1;">
+        </div>
+      </div>
+      <button class="btn btn-primary" id="add-cat-btn" style="width:100%;">Добавить категорию</button>
+    </div>
+
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-secondary" id="settings-close">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'lifeflow_v2';
+const BACKUP_KEY  = 'lifeflow_backup_meta'; // NEVER included in export/import
+
+// ── BACKUP META ── (token, gistId, dates — separate from app data)
+function loadBackupMeta() {
+  try { return JSON.parse(localStorage.getItem(BACKUP_KEY)) || {}; } catch { return {}; }
+}
+function saveBackupMeta(meta) {
+  localStorage.setItem(BACKUP_KEY, JSON.stringify(meta));
+}
+
+function defaultWorkspace(name) {
+  return {
+    id: uid(),
+    name,
+    priorities: [
+      { level: 1, name: 'Каждый день',       color: '#ff6b6b' },
+      { level: 2, name: '3–4 раза в неделю', color: '#ffa040' },
+      { level: 3, name: '1–2 раза в неделю', color: '#ffe040' },
+      { level: 4, name: 'Когда хочется',     color: '#6bdd6b' },
+    ],
+    categories: [
+      { id: 'cat1', name: 'Развивающие',      icon: '🔴', color: '#ff6b6b' },
+      { id: 'cat2', name: 'Хобби и досуг',    icon: '🟡', color: '#ffd040' },
+      { id: 'cat3', name: 'Восстанавливающие',icon: '🟢', color: '#6bdd6b' },
+    ],
+    items: []
+  };
+}
+
+function defaultData() {
+  const ws = defaultWorkspace('Life Flow');
+  return { activeWsId: ws.id, workspaces: [ws] };
+}
+
+function load() {
+  try {
+    // Try new format
+    const d = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (d && d.workspaces) {
+      // Migrate: add categories if missing
+      d.workspaces.forEach(ws => {
+        if (!ws.categories) {
+          ws.categories = [
+            { id: 'cat1', name: 'Развивающие',       icon: '🔴', color: '#ff6b6b' },
+            { id: 'cat2', name: 'Хобби и досуг',     icon: '🟡', color: '#ffd040' },
+            { id: 'cat3', name: 'Восстанавливающие', icon: '🟢', color: '#6bdd6b' },
+          ];
+        }
+      });
+      return d;
+    }
+
+    // Migrate from v1
+    const old = JSON.parse(localStorage.getItem('lifeflow_v1'));
+    if (old) {
+      const ws = defaultWorkspace('Life Flow');
+      if (old.priorities) ws.priorities = old.priorities;
+      if (old.items) ws.items = old.items;
+      return { activeWsId: ws.id, workspaces: [ws] };
+    }
+
+    return defaultData();
+  } catch { return defaultData(); }
+}
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(root)); }
+
+let root = load();
+
+function activeWs() {
+  return root.workspaces.find(w => w.id === root.activeWsId) || root.workspaces[0];
+}
+
+// Proxy state → active workspace
+function getState() { return activeWs(); }
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────
+let pathIds = []; // stack of item IDs — empty = root
+
+function currentItems() {
+  if (!pathIds.length) return activeWs().items;
+  return getItem(pathIds[pathIds.length - 1])?.children || [];
+}
+
+function getItem(id, items = activeWs().items) {
+  for (const item of items) {
+    if (item.id === id) return item;
+    if (item.children) { const f = getItem(id, item.children); if (f) return f; }
+  }
+}
+
+function parentOfId(id, items = activeWs().items, parent = null) {
+  for (const item of items) {
+    if (item.id === id) return { list: items, parent };
+    if (item.children) { const f = parentOfId(id, item.children, item); if (f) return f; }
+  }
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render() {
+  renderBreadcrumb();
+  renderSuggestion();
+  renderCards();
+}
+
+function renderBreadcrumb() {
+  const bc = document.getElementById('breadcrumb');
+  const backBtn = document.getElementById('back-btn');
+  const wsLabel = document.getElementById('ws-name-label');
+  const wsChevron = document.getElementById('ws-chevron');
+
+  if (!pathIds.length) {
+    bc.classList.add('hidden');
+    backBtn.classList.add('hidden');
+    if (wsLabel) wsLabel.textContent = activeWs().name;
+    if (wsChevron) wsChevron.style.display = '';
+    return;
+  }
+
+  backBtn.classList.remove('hidden');
+  bc.classList.remove('hidden');
+  if (wsChevron) wsChevron.style.display = 'none';
+  bc.innerHTML = '';
+
+  const homeEl = document.createElement('span');
+  homeEl.className = 'crumb';
+  homeEl.textContent = activeWs().name;
+  homeEl.onclick = () => { pathIds = []; render(); };
+  bc.appendChild(homeEl);
+
+  pathIds.forEach((id, i) => {
+    const item = getItem(id);
+    if (!item) return;
+    const sep = document.createElement('span'); sep.className = 'crumb-sep'; sep.textContent = '›';
+    bc.appendChild(sep);
+    if (i === pathIds.length - 1) {
+      const cur = document.createElement('span'); cur.className = 'crumb-current'; cur.textContent = item.name;
+      bc.appendChild(cur);
+      if (wsLabel) wsLabel.textContent = item.name;
+    } else {
+      const crumb = document.createElement('span'); crumb.className = 'crumb';
+      crumb.textContent = item.name;
+      crumb.onclick = () => { pathIds = pathIds.slice(0, i + 1); render(); };
+      bc.appendChild(crumb);
+    }
+  });
+}
+
+function renderSuggestion() {
+  const bar = document.getElementById('suggestion-bar');
+  const text = document.getElementById('suggestion-text');
+  if (pathIds.length) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+
+  const items = activeWs().items;
+  if (!items.length) { text.innerHTML = 'Добавь свои активности, чтобы начать'; return; }
+
+  function daysSince(ts) { return ts ? Math.floor((Date.now() - ts) / 86400000) : 999; }
+  const maxLevel = Math.max(...activeWs().priorities.map(p => p.level), 1);
+  function weight(p) { return p ? (maxLevel - p.level + 1) * 2 : 1; }
+  function topOf(list) {
+    if (!list.length) return null;
+    return list.map(item => {
+      const days = daysSince(item.lastDone);
+      const pri = activeWs().priorities.find(p => p.level === item.priority);
+      return { item, score: days * weight(pri), days };
+    }).sort((a, b) => b.score - a.score)[0];
+  }
+  function daysText(days) {
+    return days === 999 ? 'не занимался' : days === 0 ? 'сегодня' : `${days} ${pluralDays(days)} назад`;
+  }
+
+  const activeItems = items.filter(i => !i.paused);
+  const categories = activeWs().categories || [];
+  const itemsWithCat = activeItems.filter(i => i.categoryId);
+
+  if (!categories.length || !itemsWithCat.length) {
+    const top = topOf(activeItems);
+    if (!top) return;
+    const pri = activeWs().priorities.find(p => p.level === top.item.priority);
+    const priText = pri ? ` (Приоритет ${pri.level} · ${pri.name})` : '';
+    text.innerHTML = `Стоит заняться: <strong>${escHtml(top.item.name)}</strong> — ${daysText(top.days)}${priText}`;
+    return;
+  }
+
+  const lines = [];
+  categories.forEach(cat => {
+    const top = topOf(activeItems.filter(i => i.categoryId === cat.id));
+    if (!top) return;
+    lines.push(`<span style="color:${cat.color};font-weight:700;">${cat.icon} ${escHtml(cat.name)}:</span> <strong>${escHtml(top.item.name)}</strong> — ${daysText(top.days)}`);
+  });
+  const topNoCat = topOf(activeItems.filter(i => !i.categoryId));
+  if (topNoCat) lines.push(`<strong>${escHtml(topNoCat.item.name)}</strong> — ${daysText(topNoCat.days)}`);
+
+  text.innerHTML = lines.join('<br>');
+}
+
+
+function pluralDays(n) {
+  if (n % 10 === 1 && n % 100 !== 11) return 'день';
+  if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return 'дня';
+  return 'дней';
+}
+
+function renderCards() {
+  const list = document.getElementById('cards-list');
+  const empty = document.getElementById('empty-state');
+  const items = currentItems();
+  list.innerHTML = '';
+
+  const active = items.filter(i => !i.paused);
+  const paused = items.filter(i => i.paused);
+
+  if (!active.length && !paused.length) { empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  // Active cards
+  active.forEach((item, idx) => {
+    const card = buildCard(item, idx, items);
+    list.appendChild(card);
+  });
+
+  // Paused section
+  if (paused.length) {
+    const divider = document.createElement('div');
+    divider.style.cssText = 'margin:24px 0 12px;display:flex;align-items:center;gap:10px;';
+    divider.innerHTML = `
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+      <span style="font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--text3);text-transform:uppercase;white-space:nowrap;">⏸ На паузе · ${paused.length}</span>
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+    `;
+    list.appendChild(divider);
+
+    paused.forEach((item, idx) => {
+      const card = buildCard(item, idx, items);
+      card.style.opacity = '0.5';
+      list.appendChild(card);
+    });
+  }
+}
+
+function buildCard(item, idx, items) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.id = item.id;
+
+  const pri = activeWs().priorities.find(p => p.level === item.priority);
+  const priColor = pri ? pri.color : '#888';
+  const priLabel = pri ? `P${pri.level} · ${pri.name}` : '';
+
+  // Calculate days difference by calendar date (not raw ms) to avoid timezone issues
+  function daysBetween(ts) {
+    if (!ts) return null;
+    const now = new Date(); now.setHours(0,0,0,0);
+    const then = new Date(ts); then.setHours(0,0,0,0);
+    return Math.round((now - then) / 86400000);
+  }
+  const days = daysBetween(item.lastDone);
+  const lastDoneDate = item.lastDone ? new Date(item.lastDone).toLocaleDateString('ru', { day: 'numeric', month: 'short' }) : null;
+  let daysText;
+  if (days === null) {
+    daysText = 'Ещё не занимался';
+  } else if (days === 0) {
+    daysText = `Сегодня · ${lastDoneDate}`;
+  } else {
+    daysText = `${days} ${pluralDays(days)} назад · ${lastDoneDate}`;
+  }
+  let daysClass = 'days-ago';
+  if (days === null || (days >= 1 && item.priority === 1)) daysClass += ' urgent';
+  else if (days > 3 && item.priority === 2) daysClass += ' warn';
+
+  const childCount = (item.children || []).length;
+  const noteCount = (item.notes || []).length;
+
+  // isToday: check if lastDone date (not time) matches today
+  const isToday = item.lastDone && days === 0;
+
+  const cat = item.categoryId ? (activeWs().categories || []).find(c => c.id === item.categoryId) : null;
+  if (isToday) card.classList.add('done-today');
+
+  card.innerHTML = `
+    <div class="card-top">
+      <div class="drag-handle" title="Перетащить">⠿</div>
+      <div class="card-body">
+        <div class="card-name">${escHtml(item.name)}${isToday ? '<span class="done-check">✓</span>' : ''}</div>
+        <div class="card-meta">
+          ${pri ? `<span class="freq-badge" style="color:${priColor};border-color:${priColor};">${escHtml(priLabel)}</span>` : ''}
+          ${cat ? `<span class="cat-badge" style="color:${cat.color};border-color:${cat.color};">${cat.icon} ${escHtml(cat.name)}</span>` : ''}
+          <span class="${daysClass}">${daysText}</span>
+        </div>
+        ${childCount ? `<div class="child-count">Внутри: <span>${childCount}</span> ${pluralActivities(childCount)}</div>` : ''}
+        ${noteCount ? `<div class="notes-badge"><span class="nb-dot"></span>📝 ${noteCount} ${pluralNotes(noteCount)}</div>` : ''}
+      </div>
+      <div class="card-actions">
+        <button class="card-btn done-btn" title="Засчитать занятие">✓</button>
+        ${isToday ? `<button class="card-btn undo-btn" title="Отменить последнюю сессию" style="width:26px;height:26px;font-size:12px;color:#ffa040;border-color:#ffa040;opacity:.8;">↩</button>` : ''}
+        <button class="card-btn" title="Заметки">📝</button>
+        <button class="card-btn" title="Редактировать">✎</button>
+        <button class="card-btn open-btn" title="Открыть">›</button>
+      </div>
+    </div>
+  `;
+
+  // Buttons
+  card.querySelector('.done-btn').onclick = e => { e.stopPropagation(); openDoneModal(item.id); };
+  if (isToday) {
+    card.querySelector('.undo-btn').onclick = e => { e.stopPropagation(); undoDone(item.id); };
+  }
+  const actionBtns = card.querySelectorAll('.card-btn:not(.done-btn):not(.undo-btn):not(.open-btn)');
+  actionBtns[0].onclick = e => { e.stopPropagation(); openNotesScreen(item.id); };
+  actionBtns[1].onclick = e => { e.stopPropagation(); openEditModal(item.id); };
+  card.querySelector('.open-btn').onclick = e => { e.stopPropagation(); pathIds.push(item.id); render(); };
+  card.querySelector('.open-btn').onclick = e => { e.stopPropagation(); pathIds.push(item.id); render(); };
+
+  // Drag & Drop
+  setupDrag(card, item.id, items);
+
+  return card;
+}
+
+function pluralNotes(n) {
+  if (n % 10 === 1 && n % 100 !== 11) return 'заметка';
+  if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return 'заметки';
+  return 'заметок';
+}
+
+
+function pluralActivities(n) {
+  if (n % 10 === 1 && n % 100 !== 11) return 'активность';
+  if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return 'активности';
+  return 'активностей';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── DRAG & DROP ───────────────────────────────────────────────────────────
+let dragId = null;
+let dragOverId = null;
+let activeDragCard = null;
+let isDraggingGlobal = false;
+
+// Global mouse/touch end handlers to prevent stuck state
+function globalDragEnd() {
+  if (!dragId) return;
+  if (activeDragCard) {
+    activeDragCard.classList.remove('dragging');
+    activeDragCard.style.opacity = '';
+  }
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+
+  if (isDraggingGlobal && dragOverId && dragOverId !== dragId) {
+    const items = currentItems();
+    const fromIdx = items.findIndex(i => i.id === dragId);
+    const toIdx   = items.findIndex(i => i.id === dragOverId);
+    if (fromIdx > -1 && toIdx > -1) {
+      const [moved] = items.splice(fromIdx, 1);
+      items.splice(toIdx, 0, moved);
+      save(); render();
+    }
+  }
+  dragId = null; dragOverId = null; isDraggingGlobal = false; activeDragCard = null;
+}
+
+document.addEventListener('mouseup', globalDragEnd);
+document.addEventListener('touchend', globalDragEnd);
+document.addEventListener('touchcancel', globalDragEnd);
+
+// Prevent text selection during drag
+document.addEventListener('selectstart', e => { if (dragId) e.preventDefault(); });
+
+function setupDrag(card, id, items) {
+  const handle = card.querySelector('.drag-handle');
+  if (!handle) return;
+
+  let startX = 0, startY = 0, dragging = false;
+
+  handle.addEventListener('pointerdown', e => {
+    startX = e.clientX; startY = e.clientY;
+    dragging = false;
+    dragId = id; activeDragCard = card;
+    handle.setPointerCapture(e.pointerId);
+    e.stopPropagation();
+  });
+
+  handle.addEventListener('pointermove', e => {
+    if (dragId !== id) return;
+    const dx = Math.abs(e.clientX - startX);
+    const dy = Math.abs(e.clientY - startY);
+    if (!dragging && dy > 8 && dy > dx) {
+      dragging = true;
+      isDraggingGlobal = true;
+    }
+    if (!dragging) return;
+
+    card.classList.add('dragging');
+    const cards = [...document.querySelectorAll('.card:not(.dragging)')];
+    let closest = null, closestDist = Infinity;
+    cards.forEach(c => {
+      const rect = c.getBoundingClientRect();
+      const dist = Math.abs(e.clientY - (rect.top + rect.height / 2));
+      if (dist < closestDist) { closestDist = dist; closest = c; }
+    });
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+    if (closest) { closest.classList.add('drag-over'); dragOverId = closest.dataset.id; }
+  });
+
+  handle.addEventListener('pointerup', () => {
+    dragging = false;
+    globalDragEnd();
+  });
+
+  handle.addEventListener('pointercancel', () => {
+    dragging = false;
+    globalDragEnd();
+  });
+}
+
+// ── MODALS ────────────────────────────────────────────────────────────────
+function openOverlay(id) { document.getElementById(id).classList.add('open'); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
+
+// EDIT
+let editingId = null;
+let selectedPriority = 1;
+
+function renderPriorityPicker(selectedLevel) {
+  selectedPriority = selectedLevel || activeWs().priorities[0]?.level || 1;
+  const container = document.getElementById('priority-picker');
+  const desc = document.getElementById('priority-desc');
+  const numInput = document.getElementById('priority-input');
+
+  container.innerHTML = '';
+  activeWs().priorities.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'pri-btn' + (p.level === selectedPriority ? ' selected' : '');
+    btn.style.borderColor = p.level === selectedPriority ? p.color : 'var(--border)';
+    btn.style.color = p.level === selectedPriority ? p.color : 'var(--text3)';
+    btn.innerHTML = `<span class="pri-num">${p.level}</span><span class="pri-name">${escHtml(p.name.length > 10 ? p.name.slice(0,10)+'…' : p.name)}</span>`;
+    btn.onclick = () => {
+      numInput.value = '';
+      renderPriorityPicker(p.level);
+    };
+    container.appendChild(btn);
+  });
+
+  updatePriorityDesc();
+
+  // Wire custom number input
+  numInput.oninput = () => {
+    const v = parseInt(numInput.value);
+    if (v >= 1) {
+      selectedPriority = v;
+      // Deselect all buttons
+      container.querySelectorAll('.pri-btn').forEach(b => {
+        b.classList.remove('selected');
+        b.style.borderColor = 'var(--border)';
+        b.style.color = 'var(--text3)';
+      });
+      // Highlight matching button if exists
+      const match = activeWs().priorities.find(p => p.level === v);
+      if (match) {
+        container.querySelectorAll('.pri-btn')[activeWs().priorities.indexOf(match)].classList.add('selected');
+        container.querySelectorAll('.pri-btn')[activeWs().priorities.indexOf(match)].style.borderColor = match.color;
+        container.querySelectorAll('.pri-btn')[activeWs().priorities.indexOf(match)].style.color = match.color;
+      }
+      updatePriorityDesc();
+    }
+  };
+}
+
+function updatePriorityDesc() {
+  const desc = document.getElementById('priority-desc');
+  const cur = activeWs().priorities.find(p => p.level === selectedPriority);
+  if (cur) desc.textContent = `Приоритет ${cur.level}: ${cur.name}`;
+  else desc.textContent = `Приоритет ${selectedPriority} (пользовательский)`;
+}
+
+function openEditModal(id) {
+  editingId = id;
+  const item = id ? getItem(id) : null;
+  document.getElementById('edit-title').textContent = id ? 'Редактировать' : 'Новая активность';
+  document.getElementById('edit-name').value = item ? item.name : '';
+  const level = item ? item.priority : (activeWs().priorities[0]?.level || 1);
+  document.getElementById('priority-input').value = '';
+  renderPriorityPicker(level);
+  renderCategoryPicker(item ? item.categoryId : null);
+  document.getElementById('delete-row').style.display = id ? '' : 'none';
+  if (id && item) {
+    document.getElementById('edit-pause').textContent = item.paused ? '▶ Вернуть в активные' : '⏸ На паузу';
+    document.getElementById('edit-pause').style.background = item.paused ? 'var(--surface3)' : '';
+    document.getElementById('edit-pause').style.color = item.paused ? 'var(--accent2)' : '';
+    document.getElementById('edit-pause').style.borderColor = item.paused ? 'var(--accent)' : '';
+  }
+  openOverlay('edit-overlay');
+  setTimeout(() => document.getElementById('edit-name').focus(), 300);
+}
+
+document.getElementById('edit-cancel').onclick = () => closeOverlay('edit-overlay');
+document.getElementById('edit-save').onclick = () => {
+  const name = document.getElementById('edit-name').value.trim();
+  if (!name) return;
+  if (editingId) {
+    const item = getItem(editingId);
+    item.name = name; item.priority = selectedPriority; item.categoryId = selectedCategoryId;
+  } else {
+    const newItem = { id: uid(), name, priority: selectedPriority, categoryId: selectedCategoryId, lastDone: null, notes: [], children: [] };
+    currentItems().push(newItem);
+  }
+  save(); render(); closeOverlay('edit-overlay');
+};
+document.getElementById('edit-pause').onclick = () => {
+  if (!editingId) return;
+  const item = getItem(editingId);
+  item.paused = !item.paused;
+  save(); render(); closeOverlay('edit-overlay');
+};
+
+
+document.getElementById('edit-delete').onclick = () => {
+  if (!editingId) return;
+  const { list } = parentOfId(editingId);
+  if (list) { const i = list.findIndex(x => x.id === editingId); if (i > -1) list.splice(i, 1); }
+  save(); render(); closeOverlay('edit-overlay');
+};
+
+// ── NOTES SYSTEM ─────────────────────────────────────────────────────────
+let notesItemId = null;
+let editingNoteId = null;
+let notesSort = 'new'; // 'new' | 'old' | 'az'
+
+function openNotesScreen(itemId) {
+  notesItemId = itemId;
+  isDoneNoteMode = false; // always reset when opening notes normally
+  const item = getItem(itemId);
+  document.getElementById('notes-screen-title').textContent = item.name;
+  renderNotesList();
+  updatePageBtns();
+  updateTemplatesBtn();
+  document.getElementById('notes-screen').classList.add('open');
+}
+
+function closeNotesScreen() {
+  document.getElementById('notes-screen').classList.remove('open');
+  render(); // refresh card note count
+}
+
+function renderNotesList() {
+  const item = getItem(notesItemId);
+  if (!item.notes) item.notes = [];
+  const container = document.getElementById('notes-list');
+  const empty = document.getElementById('notes-empty');
+
+  let notes = [...item.notes];
+  if (notesSort === 'new') notes.sort((a,b) => b.updatedAt - a.updatedAt);
+  else if (notesSort === 'old') notes.sort((a,b) => a.updatedAt - b.updatedAt);
+  else if (notesSort === 'az') notes.sort((a,b) => (a.title||'').localeCompare(b.title||'', 'ru'));
+
+  // Clear existing note cards (keep empty state)
+  [...container.querySelectorAll('.note-card')].forEach(c => c.remove());
+
+  if (!notes.length) { empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  notes.forEach(note => {
+    const card = document.createElement('div');
+    card.className = 'note-card';
+    const date = new Date(note.updatedAt).toLocaleDateString('ru', { day:'numeric', month:'short', year:'numeric' });
+    const preview = note.bodyHtml
+      ? note.bodyHtml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0, 140)
+      : (note.body || '').slice(0, 140);
+    card.innerHTML = `
+      <div class="note-card-head">
+        <div class="note-card-title ${note.title ? '' : 'untitled'}">${escHtml(note.title || 'Без названия')}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <span class="note-card-date">${date}</span>
+          <button class="note-card-del" title="Удалить">✕</button>
+        </div>
+      </div>
+      ${preview ? `<div class="note-card-preview">${escHtml(preview)}${(note.bodyHtml||note.body||'').length > 140 ? '…' : ''}</div>` : ''}
+    `;
+    card.querySelector('.note-card-del').onclick = e => {
+      e.stopPropagation();
+      if (confirm('Удалить заметку?')) {
+        item.notes = item.notes.filter(n => n.id !== note.id);
+        save(); renderNotesList();
+      }
+    };
+    card.onclick = () => openNoteEditor(note.id);
+    container.appendChild(card);
+  });
+}
+
+function openNoteEditor(noteId, templateHtml) {
+  const item = getItem(notesItemId);
+  editingNoteId = noteId;
+  let note = noteId ? item.notes.find(n => n.id === noteId) : null;
+  document.getElementById('note-title-input').value = note ? (note.title || '') : '';
+  const editor = document.getElementById('note-body-editor');
+  // Priority: existing note > template > empty
+  if (note) {
+    editor.innerHTML = note.bodyHtml || legacyMdToHtml(note.body || '');
+  } else if (templateHtml) {
+    editor.innerHTML = templateHtml;
+  } else {
+    editor.innerHTML = '';
+  }
+  document.getElementById('editor-header-title').textContent = note ? 'Редактировать' : 'Новая заметка';
+  document.getElementById('note-editor').classList.add('open');
+  setTimeout(() => {
+    if (!document.getElementById('note-title-input').value) document.getElementById('note-title-input').focus();
+    else editor.focus();
+  }, 300);
+}
+
+function legacyMdToHtml(md) {
+  if (!md || !md.trim()) return '';
+  return md
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^---$/gm,'<hr>')
+    .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
+    .replace(/\n/g,'<br>');
+}
+
+function saveNote() {
+  const item = getItem(notesItemId);
+  if (!item.notes) item.notes = [];
+  const title = document.getElementById('note-title-input').value.trim();
+  const editor = document.getElementById('note-body-editor');
+  const bodyHtml = editor.innerHTML.trim();
+  const bodyText = editor.innerText.trim();
+
+  // CASE 1: Done-note mode — saving note from "засчитать" flow
+  if (isDoneNoteMode) {
+    if (!title && !bodyText) {
+      // Empty — just go back to done modal, no note
+      closeNoteEditor();
+      document.getElementById('notes-screen').classList.remove('open');
+      isDoneNoteMode = false;
+      openOverlay('done-overlay');
+      return;
+    }
+
+    let noteId;
+    if (pendingSessionNoteId === '__new__' || !pendingSessionNoteId) {
+      // Create new note
+      noteId = uid();
+      item.notes.unshift({ id: noteId, title: title || 'Заметка сессии', bodyHtml, body: bodyText, createdAt: Date.now(), updatedAt: Date.now() });
+    } else {
+      // Edit existing pending note
+      noteId = pendingSessionNoteId;
+      const note = item.notes.find(n => n.id === noteId);
+      if (note) { note.title = title || note.title; note.bodyHtml = bodyHtml; note.body = bodyText; note.updatedAt = Date.now(); }
+    }
+
+    pendingSessionNoteId = noteId;
+    isDoneNoteMode = false;
+    save();
+    closeNoteEditor();
+    document.getElementById('notes-screen').classList.remove('open');
+
+    // Update button label
+    document.getElementById('done-note-label').textContent = '✓ Заметка добавлена (нажми чтобы изменить)';
+    document.getElementById('done-add-note-btn').style.borderColor = 'var(--accent)';
+    document.getElementById('done-add-note-btn').style.color = 'var(--accent2)';
+    openOverlay('done-overlay');
+    return;
+  }
+
+  // CASE 2: Normal note save
+  if (!title && !bodyText) { closeNoteEditor(); return; }
+
+  if (editingNoteId) {
+    const note = item.notes.find(n => n.id === editingNoteId);
+    if (note) { note.title = title; note.bodyHtml = bodyHtml; note.body = bodyText; note.updatedAt = Date.now(); }
+  } else {
+    item.notes.push({ id: uid(), title, bodyHtml, body: bodyText, createdAt: Date.now(), updatedAt: Date.now() });
+  }
+  save(); closeNoteEditor(); renderNotesList();
+  // Refresh detail screen if open (so note preview updates immediately)
+  if (currentDetailState && document.getElementById('detail-screen').classList.contains('open')) {
+    renderDetailScreen();
+  }
+}
+
+function closeNoteEditor() {
+  document.getElementById('note-editor').classList.remove('open');
+  editingNoteId = null;
+}
+
+// Rich text toolbar
+document.querySelectorAll('.fmt-btn[data-cmd]').forEach(btn => {
+  btn.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const editor = document.getElementById('note-body-editor');
+    editor.focus();
+    const cmd = btn.dataset.cmd;
+    if (cmd === 'bold') document.execCommand('bold', false);
+    else if (cmd === 'italic') document.execCommand('italic', false);
+    else if (cmd === 'strike') document.execCommand('strikeThrough', false);
+    else if (cmd === 'ul') document.execCommand('insertUnorderedList', false);
+    else if (cmd === 'ol') document.execCommand('insertOrderedList', false);
+    else if (cmd === 'h1') document.execCommand('formatBlock', false, 'h1');
+    else if (cmd === 'h2') document.execCommand('formatBlock', false, 'h2');
+    else if (cmd === 'hr') document.execCommand('insertHTML', false, '<hr>');
+  });
+});
+
+// Keep only plain text + structure on paste (strip unwanted styles/spans)
+document.getElementById('note-body-editor').addEventListener('paste', e => {
+  e.preventDefault();
+  const html = e.clipboardData.getData('text/html');
+  const text = e.clipboardData.getData('text/plain');
+  if (html) {
+    // Clean pasted HTML — keep structure, remove inline styles/classes
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    // Remove style attrs and class attrs recursively
+    tmp.querySelectorAll('*').forEach(el => {
+      el.removeAttribute('style');
+      el.removeAttribute('class');
+      el.removeAttribute('id');
+      el.removeAttribute('dir');
+      // Remove unwanted tags but keep their content
+      if (['SPAN','FONT','DIV'].includes(el.tagName) && !['H1','H2','H3','UL','OL','LI','STRONG','B','EM','I','P','BR','HR','S','BLOCKQUOTE','A'].includes(el.tagName)) {
+        el.replaceWith(...el.childNodes);
+      }
+    });
+    document.execCommand('insertHTML', false, tmp.innerHTML);
+  } else {
+    // Plain text — insert with line breaks
+    const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    document.execCommand('insertHTML', false, escaped);
+  }
+});
+
+// ── MARKDOWN HELPERS (kept for note card preview) ─────────────────────────
+function mdToHtml(md) { return legacyMdToHtml(md || ''); }
+function mdToText(md) {
+  return (md||'').replace(/^#{1,3} /gm,'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/\n+/g,' ').trim();
+}
+
+// ── SUGGESTION LIST ───────────────────────────────────────────────────────
+function openSuggestionList() {
+  const items = activeWs().items;
+  if (!items.length) return;
+
+  function daysSince(ts) { return ts ? Math.floor((Date.now() - ts) / 86400000) : 999; }
+  const maxLevel = Math.max(...activeWs().priorities.map(p => p.level), 1);
+  function weight(p) { return p ? (maxLevel - p.level + 1) * 2 : 1; }
+  function scoreItems(list) {
+    return list.map(item => {
+      const days = daysSince(item.lastDone);
+      const pri = activeWs().priorities.find(p => p.level === item.priority);
+      return { item, score: days * weight(pri), days, pri };
+    }).sort((a, b) => b.score - a.score);
+  }
+
+  const activeItems = items.filter(i => !i.paused);
+  const categories = activeWs().categories || [];
+  const container = document.getElementById('suggestion-list-content');
+  container.innerHTML = '';
+
+  function renderSection(title, color, icon, scoredList) {
+    if (!scoredList.length) return;
+    const section = document.createElement('div');
+    section.style.marginBottom = '20px';
+    const heading = document.createElement('div');
+    heading.style.cssText = `font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:${color};margin-bottom:8px;text-transform:uppercase;letter-spacing:.6px;`;
+    heading.textContent = icon + ' ' + title;
+    section.appendChild(heading);
+    scoredList.forEach(({ item, days, pri }, idx) => {
+      const el = document.createElement('div');
+      el.className = 'sq-item';
+      const priColor = pri ? pri.color : 'var(--text3)';
+      const priLabel = pri ? `P${pri.level} · ${pri.name}` : '';
+      const dText = days === 999 ? 'Ещё не занимался' : days === 0 ? 'Сегодня' : `${days} ${pluralDays(days)} назад`;
+      el.innerHTML = `
+        <div class="sq-rank ${idx === 0 ? 'top' : ''}">${idx + 1}</div>
+        <div class="sq-body">
+          <div class="sq-name">${escHtml(item.name)}</div>
+          <div class="sq-meta">${dText}</div>
+        </div>
+        ${pri ? `<span class="sq-badge" style="color:${priColor};border-color:${priColor};">${escHtml(priLabel)}</span>` : ''}
+      `;
+      section.appendChild(el);
+    });
+    container.appendChild(section);
+  }
+
+  if (categories.length) {
+    categories.forEach(cat => {
+      const catItems = activeItems.filter(i => i.categoryId === cat.id);
+      renderSection(cat.name, cat.color, cat.icon, scoreItems(catItems));
+    });
+  }
+  const noCat = activeItems.filter(i => !i.categoryId);
+  if (noCat.length) renderSection('Без категории', 'var(--text2)', '📌', scoreItems(noCat));
+
+  openOverlay('suggestion-list-overlay');
+}
+document.getElementById('suggestion-list-close').onclick = () => closeOverlay('suggestion-list-overlay');
+
+// ── TEMPLATES SYSTEM ──────────────────────────────────────────────────────
+let editingTemplateId = null;
+let templatePickerCallback = null;
+
+document.getElementById('templates-btn').onclick = () => openTemplatesScreen();
+
+function openTemplatesScreen() {
+  const item = getItem(notesItemId);
+  document.getElementById('templates-screen-title').textContent = `Шаблоны · ${item.name}`;
+  renderTemplatesList();
+  document.getElementById('templates-screen').classList.add('open');
+}
+
+function renderTemplatesList() {
+  const item = getItem(notesItemId);
+  if (!item.templates) item.templates = [];
+  const container = document.getElementById('templates-list-content');
+  container.innerHTML = '';
+
+  if (!item.templates.length) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:40px 20px;">
+        <div class="emoji">📄</div>
+        <p>Шаблонов пока нет.<br>Нажми <strong>+</strong> чтобы создать первый.</p>
+      </div>`;
+    return;
+  }
+
+  item.templates.forEach(tpl => {
+    const card = document.createElement('div');
+    card.className = 'tpl-card';
+    const preview = tpl.bodyHtml
+      ? tpl.bodyHtml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,120)
+      : '';
+    card.innerHTML = `
+      <div class="tpl-card-head">
+        <div class="tpl-card-name">${escHtml(tpl.name || 'Без названия')}</div>
+        <div class="tpl-actions">
+          <button class="card-btn tpl-edit-btn" title="Редактировать">✎</button>
+          <button class="card-btn tpl-del-btn" title="Удалить" style="color:#ff7070;">✕</button>
+        </div>
+      </div>
+      ${preview ? `<div class="tpl-card-preview">${escHtml(preview)}…</div>` : ''}
+    `;
+    card.querySelector('.tpl-edit-btn').onclick = () => openTemplateEditor(tpl.id);
+    card.querySelector('.tpl-del-btn').onclick = () => {
+      if (!confirm(`Удалить шаблон "${tpl.name}"?`)) return;
+      item.templates = item.templates.filter(t => t.id !== tpl.id);
+      save(); renderTemplatesList(); updateTemplatesBtn();
+    };
+    container.appendChild(card);
+  });
+}
+
+document.getElementById('template-add-btn').onclick = () => openTemplateEditor(null);
+document.getElementById('templates-back-btn').onclick = () => {
+  document.getElementById('templates-screen').classList.remove('open');
+};
+document.getElementById('template-editor-back-btn').onclick = saveTemplateEditor;
+document.getElementById('template-editor-save-btn').onclick = saveTemplateEditor;
+
+function openTemplateEditor(tplId) {
+  const item = getItem(notesItemId);
+  if (!item.templates) item.templates = [];
+  editingTemplateId = tplId;
+  const tpl = tplId ? item.templates.find(t => t.id === tplId) : null;
+  document.getElementById('template-editor-title').textContent = tpl ? 'Редактировать шаблон' : 'Новый шаблон';
+  document.getElementById('template-name-input').value = tpl ? (tpl.name || '') : '';
+  document.getElementById('template-body-editor').innerHTML = tpl ? (tpl.bodyHtml || '') : '';
+  document.getElementById('template-editor-screen').classList.add('open');
+  setTimeout(() => {
+    const ni = document.getElementById('template-name-input');
+    if (!ni.value) ni.focus(); else document.getElementById('template-body-editor').focus();
+  }, 300);
+}
+
+function saveTemplateEditor() {
+  const item = getItem(notesItemId);
+  if (!item.templates) item.templates = [];
+  const name = document.getElementById('template-name-input').value.trim();
+  const editor = document.getElementById('template-body-editor');
+  const bodyHtml = editor.innerHTML.trim();
+  const bodyText = editor.innerText.trim();
+  if (!name && !bodyText) {
+    document.getElementById('template-editor-screen').classList.remove('open');
+    return;
+  }
+  if (editingTemplateId) {
+    const tpl = item.templates.find(t => t.id === editingTemplateId);
+    if (tpl) { tpl.name = name || 'Без названия'; tpl.bodyHtml = bodyHtml; tpl.body = bodyText; }
+  } else {
+    item.templates.push({ id: uid(), name: name || 'Без названия', bodyHtml, body: bodyText });
+  }
+  save();
+  document.getElementById('template-editor-screen').classList.remove('open');
+  renderTemplatesList();
+  updateTemplatesBtn();
+}
+
+document.querySelectorAll('.fmt-btn[data-tpl-fmt]').forEach(btn => {
+  btn.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const editor = document.getElementById('template-body-editor');
+    editor.focus();
+    const fmt = btn.dataset.tplFmt;
+    if (fmt === 'bold') document.execCommand('bold', false);
+    else if (fmt === 'italic') document.execCommand('italic', false);
+    else if (fmt === 'h1') document.execCommand('formatBlock', false, 'h1');
+    else if (fmt === 'h2') document.execCommand('formatBlock', false, 'h2');
+    else if (fmt === 'ul') document.execCommand('insertUnorderedList', false);
+    else if (fmt === 'ol') document.execCommand('insertOrderedList', false);
+    else if (fmt === 'hr') document.execCommand('insertHTML', false, '<hr>');
+  });
+});
+
+document.getElementById('template-body-editor').addEventListener('paste', e => {
+  e.preventDefault();
+  const html = e.clipboardData.getData('text/html');
+  const text = e.clipboardData.getData('text/plain');
+  if (html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    tmp.querySelectorAll('*').forEach(el => {
+      el.removeAttribute('style'); el.removeAttribute('class');
+      el.removeAttribute('id'); el.removeAttribute('dir');
+    });
+    document.execCommand('insertHTML', false, tmp.innerHTML);
+  } else {
+    document.execCommand('insertHTML', false,
+      text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'));
+  }
+});
+
+function updateTemplatesBtn() {
+  const item = notesItemId ? getItem(notesItemId) : null;
+  const btn = document.getElementById('templates-btn');
+  const hasTemplates = item && item.templates && item.templates.length > 0;
+  btn.classList.toggle('tpl-has-templates', hasTemplates);
+}
+
+function openTemplatePicker(callback) {
+  const item = getItem(notesItemId);
+  const templates = item && item.templates ? item.templates : [];
+  templatePickerCallback = callback;
+  const list = document.getElementById('template-picker-list');
+  list.innerHTML = '';
+
+  if (!templates.length) {
+    callback(null);
+    return;
+  }
+
+  templates.forEach(tpl => {
+    const el = document.createElement('div');
+    el.className = 'tpl-picker-item';
+    const preview = tpl.bodyHtml
+      ? tpl.bodyHtml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,60)
+      : '';
+    el.innerHTML = `
+      <div style="flex:1;">
+        <div class="tpl-picker-name">${escHtml(tpl.name)}</div>
+        ${preview ? `<div class="tpl-picker-preview">${escHtml(preview)}…</div>` : ''}
+      </div>
+      <span style="color:var(--text3);font-size:14px;">›</span>
+    `;
+    el.onclick = () => {
+      closeOverlay('template-picker-overlay');
+      callback(tpl.bodyHtml || '');
+    };
+    list.appendChild(el);
+  });
+
+  openOverlay('template-picker-overlay');
+}
+
+document.getElementById('template-picker-skip').onclick = () => {
+  closeOverlay('template-picker-overlay');
+  if (templatePickerCallback) templatePickerCallback(null);
+};
+document.getElementById('template-picker-cancel').onclick = () => {
+  closeOverlay('template-picker-overlay');
+  templatePickerCallback = null;
+};
+
+
+let pageType = null; // 'rules' | 'motivation'
+
+function openPageEditor(type) {
+  pageType = type;
+  const item = getItem(notesItemId);
+  const titles = { rules: '📋 Правила работы', motivation: '💡 Мотивация' };
+  const placeholders = {
+    rules: 'Опиши процесс работы, правила, что считать хорошим результатом...',
+    motivation: 'Напиши зачем ты этим занимаешься, что тебя вдохновляет...'
+  };
+  document.getElementById('page-editor-title').textContent = titles[type];
+  const editor = document.getElementById('page-body-editor');
+  editor.setAttribute('placeholder', placeholders[type]);
+  editor.innerHTML = item[type + 'Html'] || legacyMdToHtml(item[type] || '');
+  document.getElementById('page-editor').classList.add('open');
+  setTimeout(() => editor.focus(), 300);
+}
+
+function savePageEditor() {
+  const item = getItem(notesItemId);
+  const editor = document.getElementById('page-body-editor');
+  item[pageType + 'Html'] = editor.innerHTML;
+  item[pageType] = editor.innerText;
+  save();
+  updatePageBtns();
+  document.getElementById('page-editor').classList.remove('open');
+}
+
+function updatePageBtns() {
+  const item = notesItemId ? getItem(notesItemId) : null;
+  const rulesBtn = document.getElementById('rules-btn');
+  const motBtn = document.getElementById('motivation-btn');
+  if (!item) return;
+  rulesBtn.classList.toggle('page-has-content', !!(item.rules && item.rules.trim()));
+  motBtn.classList.toggle('page-has-content', !!(item.motivation && item.motivation.trim()));
+}
+
+document.getElementById('rules-btn').onclick = () => openPageEditor('rules');
+document.getElementById('motivation-btn').onclick = () => openPageEditor('motivation');
+document.getElementById('page-back-btn').onclick = savePageEditor;
+document.getElementById('page-save-btn').onclick = savePageEditor;
+
+// Formatting toolbar for page editor — execCommand based
+document.querySelectorAll('.fmt-btn[data-page-fmt]').forEach(btn => {
+  btn.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const editor = document.getElementById('page-body-editor');
+    editor.focus();
+    const fmt = btn.dataset.pageFmt;
+    if (fmt === 'bold') document.execCommand('bold', false);
+    else if (fmt === 'italic') document.execCommand('italic', false);
+    else if (fmt === 'h1') document.execCommand('formatBlock', false, 'h1');
+    else if (fmt === 'h2') document.execCommand('formatBlock', false, 'h2');
+    else if (fmt === 'ul') document.execCommand('insertUnorderedList', false);
+    else if (fmt === 'ol') document.execCommand('insertOrderedList', false);
+    else if (fmt === 'code') document.execCommand('formatBlock', false, 'pre');
+    else if (fmt === 'hr') document.execCommand('insertHTML', false, '<hr>');
+  });
+});
+
+// Paste handler for page editor
+document.getElementById('page-body-editor').addEventListener('paste', e => {
+  e.preventDefault();
+  const html = e.clipboardData.getData('text/html');
+  const text = e.clipboardData.getData('text/plain');
+  if (html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    tmp.querySelectorAll('*').forEach(el => {
+      el.removeAttribute('style'); el.removeAttribute('class');
+      el.removeAttribute('id'); el.removeAttribute('dir');
+    });
+    document.execCommand('insertHTML', false, tmp.innerHTML);
+  } else {
+    const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    document.execCommand('insertHTML', false, escaped);
+  }
+});
+
+
+
+
+
+// Notes screen events
+document.getElementById('notes-back-btn').onclick = closeNotesScreen;
+document.getElementById('notes-add-btn').onclick = () => {
+  openTemplatePicker(html => openNoteEditor(null, html));
+};
+document.getElementById('editor-back-btn').onclick = saveNote;
+document.getElementById('editor-save-btn').onclick = saveNote;
+
+// Sort buttons
+['new','old','az'].forEach(s => {
+  document.getElementById(`sort-${s}-btn`).onclick = function() {
+    notesSort = s;
+    document.querySelectorAll('.notes-sort-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    renderNotesList();
+  };
+});
+
+
+// DONE
+let doneItemId = null;
+let pendingSessionNoteId = null;
+let isDoneNoteMode = false;
+
+function openDoneModal(id) {
+  doneItemId = id;
+  pendingSessionNoteId = null;
+  isDoneNoteMode = false;
+  const item = getItem(id);
+  const parents = getParentChain(id);
+  let infoText = `Активность: ${item.name}`;
+  if (parents && parents.length) infoText += `\nРодители: ${parents.map(p => p.name).join(' → ')}`;
+  document.getElementById('done-info').textContent = infoText;
+  document.getElementById('done-info').style.whiteSpace = 'pre-line';
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('done-date').value = today;
+  document.getElementById('done-hours').value = '';
+  document.getElementById('done-minutes').value = '';
+  document.getElementById('done-note-label').textContent = 'Добавить заметку (необязательно)';
+  document.getElementById('done-add-note-btn').style.borderColor = '';
+  document.getElementById('done-add-note-btn').style.color = '';
+  document.getElementById('done-confirm-all').style.display = (parents && parents.length) ? '' : 'none';
+  openOverlay('done-overlay');
+}
+
+// "Add note" button — opens note editor in done-note mode
+document.getElementById('done-add-note-btn').onclick = () => {
+  if (!doneItemId) return;
+  notesItemId = doneItemId;
+  const item = getItem(doneItemId);
+  if (!item.notes) item.notes = [];
+
+  closeOverlay('done-overlay');
+  document.getElementById('notes-screen-title').textContent = item.name;
+  document.getElementById('notes-screen').classList.add('open');
+  isDoneNoteMode = true;
+
+  if (pendingSessionNoteId && pendingSessionNoteId !== '__new__') {
+    // Edit existing pending note — no template needed, already has content
+    setTimeout(() => openNoteEditor(pendingSessionNoteId), 50);
+  } else {
+    // New note — offer template picker first
+    pendingSessionNoteId = '__new__';
+    setTimeout(() => {
+      openTemplatePicker(html => openNoteEditor(null, html));
+    }, 50);
+  }
+};
+
+// Returns array of parent items from root down to direct parent
+function getParentChain(id, items = activeWs().items, chain = []) {
+  for (const item of items) {
+    if (item.id === id) return chain;
+    if (item.children) {
+      const found = getParentChain(id, item.children, [...chain, item]);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function applyDone(item, minutes, dateTs, path, noteId) {
+  item.prevLastDone = item.lastDone;
+  item.lastDone = dateTs;
+  if (path !== undefined) {
+    if (!item.sessions) item.sessions = [];
+    const session = {
+      id: uid(),
+      date: dateTs,
+      minutes: minutes || 0,
+      path: path,
+      itemId: item.id,
+      noteId: noteId || null  // store only reference, not text
+    };
+    item.sessions.unshift(session);
+  }
+}
+
+function formatMinutes(total) {
+  if (!total) return '';
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h && m) return `${h} ч ${m} мин`;
+  if (h) return `${h} ч`;
+  return `${m} мин`;
+}
+
+function moveToTop(itemId, list) {
+  const idx = list.findIndex(x => x.id === itemId);
+  if (idx > 0) { const [moved] = list.splice(idx, 1); list.unshift(moved); }
+}
+
+function confirmDone(withParents) {
+  const dateVal = document.getElementById('done-date').value;
+  const dateTs = dateVal ? new Date(dateVal + 'T12:00:00').getTime() : Date.now();
+  const hours = parseInt(document.getElementById('done-hours').value) || 0;
+  const mins = parseInt(document.getElementById('done-minutes').value) || 0;
+  const totalMinutes = hours * 60 + mins;
+
+  const item = getItem(doneItemId);
+  const parents = getParentChain(doneItemId) || [];
+  const pathParts = [...parents.map(p => p.name), item.name];
+  const path = pathParts.length > 1 ? pathParts.join(' · ') : item.name;
+
+  // If pending note was '__new__' but user never wrote anything, treat as no note
+  const noteId = (pendingSessionNoteId && pendingSessionNoteId !== '__new__') ? pendingSessionNoteId : null;
+
+  applyDone(item, totalMinutes, dateTs, path, noteId);
+  moveToTop(doneItemId, currentItems());
+
+  if (withParents && parents.length) {
+    parents.forEach(parent => {
+      applyDone(parent, 0, dateTs, undefined, null);
+      const grandParents = getParentChain(parent.id);
+      const parentList = grandParents && grandParents.length
+        ? grandParents[grandParents.length - 1].children
+        : activeWs().items;
+      moveToTop(parent.id, parentList);
+    });
+  }
+
+  pendingSessionNoteId = null;
+  save(); render();
+
+  setTimeout(() => {
+    const card = document.querySelector(`.card[data-id="${doneItemId}"]`);
+    if (card) {
+      card.classList.add('done-flash');
+      card.addEventListener('animationend', () => card.classList.remove('done-flash'), { once: true });
+    }
+  }, 50);
+
+  closeOverlay('done-overlay');
+}
+
+document.getElementById('done-cancel').onclick = () => {
+  // If a pending note was created but not confirmed, delete it
+  if (pendingSessionNoteId && pendingSessionNoteId !== '__new__') {
+    const item = getItem(doneItemId);
+    if (item && item.notes) item.notes = item.notes.filter(n => n.id !== pendingSessionNoteId);
+    save();
+  }
+  pendingSessionNoteId = null;
+  isDoneNoteMode = false;
+  closeOverlay('done-overlay');
+};
+document.getElementById('done-confirm-single').onclick = () => confirmDone(false);
+document.getElementById('done-confirm-all').onclick = () => confirmDone(true);
+
+
+function undoDone(id) {
+  const parents = getParentChain(id);
+  const hasParents = parents && parents.length > 0;
+
+  // Build confirm message
+  let msg = 'Отменить отметку о занятии?';
+  if (hasParents) msg += `\n\nОтменить только для "${getItem(id).name}" или для всех родителей тоже?`;
+
+  if (!hasParents) {
+    if (!confirm(msg)) return;
+    applyCancelDone(getItem(id));
+    save(); render();
+    return;
+  }
+
+  // Show choice via custom mini-menu
+  openUndoChoiceMenu(id, parents);
+}
+
+function applyCancelDone(item) {
+  item.lastDone = item.prevLastDone || null;
+  delete item.prevLastDone;
+  // Remove last session and its linked note if any
+  if (item.sessions && item.sessions.length) {
+    const session = item.sessions[0];
+    if (session.noteId && item.notes) {
+      item.notes = item.notes.filter(n => n.id !== session.noteId);
+    }
+    item.sessions.shift();
+  }
+}
+
+let undoChoiceItemId = null;
+function openUndoChoiceMenu(id, parents) {
+  undoChoiceItemId = id;
+  const item = getItem(id);
+  document.getElementById('undo-choice-name').textContent = item.name;
+  document.getElementById('undo-choice-parents').textContent =
+    parents.map(p => p.name).join(' → ');
+  openOverlay('undo-choice-overlay');
+}
+
+
+
+document.getElementById('undo-choice-cancel').onclick = () => closeOverlay('undo-choice-overlay');
+document.getElementById('undo-choice-single').onclick = () => {
+  applyCancelDone(getItem(undoChoiceItemId));
+  save(); render(); closeOverlay('undo-choice-overlay');
+};
+document.getElementById('undo-choice-all').onclick = () => {
+  applyCancelDone(getItem(undoChoiceItemId));
+  const parents = getParentChain(undoChoiceItemId);
+  if (parents) parents.forEach(p => applyCancelDone(p));
+  save(); render(); closeOverlay('undo-choice-overlay');
+};
+
+document.getElementById('settings-btn').onclick = () => { renderFreqList(); renderCatList(); openOverlay('settings-overlay'); };
+document.getElementById('settings-close').onclick = () => closeOverlay('settings-overlay');
+
+function renderFreqList() {
+  const list = document.getElementById('freq-list');
+  list.innerHTML = '';
+  // Sort by level
+  [...activeWs().priorities].sort((a,b) => a.level - b.level).forEach(p => {
+    const el = document.createElement('div'); el.className = 'freq-item';
+    el.innerHTML = `
+      <div style="width:24px;height:24px;border-radius:6px;background:${p.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:12px;color:#fff;">${p.level}</span>
+      </div>
+      <div class="freq-item-name"><strong>P${p.level}</strong> · ${escHtml(p.name)}</div>
+      <div class="freq-item-actions">
+        <button class="freq-item-btn edit-f" title="Переименовать">✎</button>
+        <button class="freq-item-btn del" title="Удалить">✕</button>
+      </div>`;
+    el.querySelector('.del').onclick = () => {
+      if (activeWs().priorities.length <= 1) return alert('Нужен хотя бы один уровень приоритета');
+      activeWs().priorities = activeWs().priorities.filter(x => x.level !== p.level);
+      save(); renderFreqList(); render();
+    };
+    el.querySelector('.edit-f').onclick = () => {
+      const newName = prompt('Новое название:', p.name);
+      if (newName && newName.trim()) { p.name = newName.trim(); save(); renderFreqList(); render(); }
+    };
+    list.appendChild(el);
+  });
+}
+
+// Sync color hex input
+const colorPicker = document.getElementById('new-freq-color');
+const colorHex = document.getElementById('new-freq-color-hex');
+colorPicker.oninput = () => { colorHex.value = colorPicker.value; };
+colorHex.oninput = () => { if (/^#[0-9a-fA-F]{6}$/.test(colorHex.value)) colorPicker.value = colorHex.value; };
+
+document.getElementById('add-freq-btn').onclick = () => {
+  const name = document.getElementById('new-freq-name').value.trim();
+  if (!name) return;
+  const color = colorPicker.value;
+  const maxLevel = activeWs().priorities.reduce((m, p) => Math.max(m, p.level), 0);
+  activeWs().priorities.push({ level: maxLevel + 1, name, color });
+  document.getElementById('new-freq-name').value = '';
+  save(); renderFreqList(); render();
+};
+
+// FAB
+document.getElementById('fab').onclick = () => openEditModal(null);
+
+// Close overlays on backdrop click
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+// Back button
+document.getElementById('back-btn').onclick = () => { pathIds.pop(); render(); };
+
+// ── CATEGORIES ────────────────────────────────────────────────────────────
+let selectedCategoryId = null;
+
+function renderCategoryPicker(selectedId) {
+  selectedCategoryId = selectedId || null;
+  const container = document.getElementById('category-picker');
+  container.innerHTML = '';
+
+  // "None" button
+  const noneBtn = document.createElement('button');
+  noneBtn.className = 'cat-btn' + (!selectedCategoryId ? ' selected' : '');
+  noneBtn.style.borderColor = !selectedCategoryId ? 'var(--accent)' : 'var(--border)';
+  noneBtn.style.color = !selectedCategoryId ? 'var(--accent2)' : 'var(--text3)';
+  noneBtn.textContent = '— Без категории';
+  noneBtn.onclick = () => renderCategoryPicker(null);
+  container.appendChild(noneBtn);
+
+  (activeWs().categories || []).forEach(cat => {
+    const btn = document.createElement('button');
+    const isSelected = cat.id === selectedCategoryId;
+    btn.className = 'cat-btn' + (isSelected ? ' selected' : '');
+    btn.style.borderColor = isSelected ? cat.color : 'var(--border)';
+    btn.style.color = isSelected ? cat.color : 'var(--text3)';
+    btn.innerHTML = `${cat.icon} ${escHtml(cat.name)}`;
+    btn.onclick = () => renderCategoryPicker(cat.id);
+    container.appendChild(btn);
+  });
+}
+
+function renderCatList() {
+  const list = document.getElementById('cat-list');
+  list.innerHTML = '';
+  (activeWs().categories || []).forEach(cat => {
+    const el = document.createElement('div'); el.className = 'cat-item';
+    el.innerHTML = `
+      <div class="cat-icon">${cat.icon}</div>
+      <div class="cat-item-name" style="color:${cat.color}">${escHtml(cat.name)}</div>
+      <div class="freq-item-actions">
+        <button class="freq-item-btn edit-c" title="Редактировать">✎</button>
+        <button class="freq-item-btn del" title="Удалить">✕</button>
+      </div>`;
+    el.querySelector('.del').onclick = () => {
+      if (!confirm(`Удалить категорию "${cat.name}"?`)) return;
+      activeWs().categories = (activeWs().categories || []).filter(c => c.id !== cat.id);
+      save(); renderCatList(); render();
+    };
+    el.querySelector('.edit-c').onclick = () => {
+      const newName = prompt('Новое название:', cat.name);
+      if (newName && newName.trim()) { cat.name = newName.trim(); save(); renderCatList(); render(); }
+    };
+    list.appendChild(el);
+  });
+}
+
+const newCatColor = document.getElementById('new-cat-color');
+const newCatColorHex = document.getElementById('new-cat-color-hex');
+newCatColor.oninput = () => { newCatColorHex.value = newCatColor.value; };
+newCatColorHex.oninput = () => { if (/^#[0-9a-fA-F]{6}$/.test(newCatColorHex.value)) newCatColor.value = newCatColorHex.value; };
+
+document.getElementById('add-cat-btn').onclick = () => {
+  const icon = document.getElementById('new-cat-icon').value.trim() || '📌';
+  const name = document.getElementById('new-cat-name').value.trim();
+  if (!name) return;
+  const color = newCatColor.value;
+  if (!activeWs().categories) activeWs().categories = [];
+  activeWs().categories.push({ id: uid(), name, icon, color });
+  document.getElementById('new-cat-icon').value = '';
+  document.getElementById('new-cat-name').value = '';
+  save(); renderCatList();
+};
+
+
+document.getElementById('sync-close').onclick = () => closeOverlay('sync-overlay');
+
+function doExport() {
+  const json = JSON.stringify(root, null, 2); // root only — no BACKUP_KEY data
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url; a.download = `lifeflow-${date}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  // Track last export date
+  const meta = loadBackupMeta();
+  meta.lastExportDate = Date.now();
+  saveBackupMeta(meta);
+  renderBackupReminder();
+  showImportStatus('✅ Файл скачан', '#6bdd6b');
+}
+
+document.getElementById('export-btn').onclick = doExport;
+
+document.getElementById('import-trigger-btn').onclick = () => {
+  document.getElementById('import-file-input').value = '';
+  document.getElementById('import-file-input').click();
+};
+
+document.getElementById('import-file-input').onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      // Support both old single-workspace format and new multi-workspace format
+      if (imported.workspaces) {
+        if (!confirm(`Импортировать данные из файла "${file.name}"?\nТекущие данные будут заменены.`)) return;
+        root = imported;
+      } else if (imported.items && imported.priorities) {
+        if (!confirm(`Импортировать данные из файла "${file.name}"?\nТекущие данные будут заменены.`)) return;
+        const ws = defaultWorkspace('Life Flow');
+        ws.priorities = imported.priorities;
+        ws.items = imported.items;
+        root = { activeWsId: ws.id, workspaces: [ws] };
+      } else {
+        throw new Error('Неверный формат файла');
+      }
+      save(); render();
+      closeOverlay('sync-overlay');
+    } catch (err) {
+      showImportStatus('❌ Ошибка: ' + err.message, '#ff7070');
+    }
+  };
+  reader.readAsText(file);
+};
+
+document.getElementById('clear-data-btn').onclick = () => {
+  if (!confirm('Удалить ВСЕ данные? Это действие нельзя отменить.')) return;
+  root = defaultData();
+  save(); render(); closeOverlay('sync-overlay');
+};
+
+function showImportStatus(msg, color) {
+  const el = document.getElementById('import-status');
+  el.textContent = msg; el.style.color = color; el.style.display = '';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────
+let dashPeriod = 'week'; // week | month | all | custom
+let dashFrom = null, dashTo = null;
+
+function openDashboard() {
+  document.getElementById('dashboard-screen').classList.add('open');
+  renderDashboard();
+}
+function closeDashboard() {
+  document.getElementById('dashboard-screen').classList.remove('open');
+}
+
+document.getElementById('dashboard-btn').onclick = openDashboard;
+document.getElementById('dashboard-back-btn').onclick = closeDashboard;
+
+function getPeriodRange() {
+  const now = new Date(); now.setHours(23,59,59,999);
+  const to = now.getTime();
+  if (dashPeriod === 'week') {
+    const from = new Date(); from.setDate(from.getDate() - 6); from.setHours(0,0,0,0);
+    return { from: from.getTime(), to };
+  }
+  if (dashPeriod === 'month') {
+    const from = new Date(); from.setDate(from.getDate() - 29); from.setHours(0,0,0,0);
+    return { from: from.getTime(), to };
+  }
+  if (dashPeriod === 'custom' && dashFrom && dashTo) {
+    return { from: new Date(dashFrom + 'T00:00:00').getTime(), to: new Date(dashTo + 'T23:59:59').getTime() };
+  }
+  return { from: 0, to };
+}
+
+// Collect all sessions from all items recursively
+function collectSessions(items, result = [], topLevelName = null) {
+  for (const item of items) {
+    const rootName = topLevelName || item.name; // top-level parent name
+    if (item.sessions) {
+      item.sessions.forEach(s => result.push({
+        ...s,
+        itemName: rootName,
+        itemId: item.id
+      }));
+    }
+    if (item.children) collectSessions(item.children, result, rootName);
+  }
+  return result;
+}
+
+function getAllSessions() {
+  const all = [];
+  for (const ws of root.workspaces) collectSessions(ws.items, all);
+  return all;
+}
+
+function renderDashboard() {
+  const el = document.getElementById('dashboard-content');
+  const { from, to } = getPeriodRange();
+
+  const allSessions = getAllSessions().filter(s => s.date >= from && s.date <= to);
+
+  el.innerHTML = `
+    <!-- Period selector -->
+    <div class="dash-period-row">
+      <button class="dash-period-btn ${dashPeriod==='week'?'active':''}" data-p="week">Неделя</button>
+      <button class="dash-period-btn ${dashPeriod==='month'?'active':''}" data-p="month">Месяц</button>
+      <button class="dash-period-btn ${dashPeriod==='all'?'active':''}" data-p="all">Всё время</button>
+      <button class="dash-period-btn ${dashPeriod==='custom'?'active':''}" data-p="custom">Период</button>
+    </div>
+    ${dashPeriod === 'custom' ? `
+      <div class="date-range-row">
+        <input type="date" id="dash-from" value="${dashFrom||''}" placeholder="От">
+        <span style="color:var(--text3);">—</span>
+        <input type="date" id="dash-to" value="${dashTo||''}" placeholder="До">
+        <button class="btn btn-primary" id="dash-apply" style="padding:8px 14px;font-size:13px;">Применить</button>
+      </div>
+    ` : ''}
+
+    <!-- Section 0: Category balance -->
+    <div class="dash-section-title">Баланс по категориям</div>
+    <div id="dash-cats"></div>
+
+    <!-- Section 1: Bar chart -->
+    <div class="dash-section-title">Топ активностей по времени</div>
+    <div id="dash-bars"></div>
+
+    <!-- Section 2: Stats per activity -->
+    <div class="dash-section-title">По каждой активности</div>
+    <div id="dash-stats"></div>
+
+    <!-- Section 3: Calendar heatmap -->
+    <div class="dash-section-title">Календарь активности</div>
+    <div class="calendar-wrap"><div id="dash-calendar"></div></div>
+  `;
+
+  // Period button handlers
+  el.querySelectorAll('.dash-period-btn').forEach(btn => {
+    btn.onclick = () => { dashPeriod = btn.dataset.p; renderDashboard(); };
+  });
+  if (dashPeriod === 'custom') {
+    el.querySelector('#dash-apply').onclick = () => {
+      dashFrom = el.querySelector('#dash-from').value;
+      dashTo = el.querySelector('#dash-to').value;
+      renderDashboard();
+    };
+  }
+
+  // ── CATEGORY BALANCE ──
+  const catsEl = el.querySelector('#dash-cats');
+  const categories = activeWs().categories || [];
+  if (!categories.length) {
+    catsEl.innerHTML = `<div class="dash-empty" style="padding:10px 0;">Назначь категории активностям в настройках ⚙</div>`;
+  } else {
+    const catMins = {};
+    categories.forEach(c => { catMins[c.id] = 0; });
+    catMins['__none__'] = 0;
+    allSessions.forEach(s => {
+      // Find item to get its categoryId
+      function findCat(items) {
+        for (const item of items) {
+          if (item.id === s.itemId) return item.categoryId || '__none__';
+          if (item.children) { const r = findCat(item.children); if (r) return r; }
+        }
+        return null;
+      }
+      const catId = findCat(activeWs().items) || '__none__';
+      if (catMins[catId] !== undefined) catMins[catId] += s.minutes || 0;
+      else catMins['__none__'] = (catMins['__none__'] || 0) + (s.minutes || 0);
+    });
+
+    const totalMins = Object.values(catMins).reduce((a, b) => a + b, 0);
+    if (!totalMins) {
+      catsEl.innerHTML = `<div class="dash-empty" style="padding:10px 0;">Нет данных за период — засчитывай занятия с указанием времени</div>`;
+    } else {
+      catsEl.innerHTML = categories.map(cat => {
+        const mins = catMins[cat.id] || 0;
+        const pct = Math.round(mins / totalMins * 100);
+        return `
+          <div class="bar-item" style="margin-bottom:10px;">
+            <div class="bar-label" style="color:${cat.color};">${cat.icon} ${escHtml(cat.name)}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${cat.color};"></div></div>
+            <div class="bar-value" style="color:${cat.color};">${formatMinutes(mins)||'—'} <span style="color:var(--text3);font-size:11px;">${pct}%</span></div>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  // ── BAR CHART ──
+  const barsEl = el.querySelector('#dash-bars');
+  const byItem = {};
+  allSessions.forEach(s => {
+    if (!byItem[s.itemName]) byItem[s.itemName] = 0;
+    byItem[s.itemName] += s.minutes || 0;
+  });
+  const sorted = Object.entries(byItem).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  if (!sorted.length) {
+    barsEl.innerHTML = `<div class="dash-empty">Нет данных за этот период.<br>Начни засчитывать занятия с указанием времени.</div>`;
+  } else {
+    const max = sorted[0][1] || 1;
+    barsEl.innerHTML = sorted.map(([name, mins]) => `
+      <div class="bar-item">
+        <div class="bar-label" title="${escHtml(name)}">${escHtml(name)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(mins/max*100)}%"></div></div>
+        <div class="bar-value">${formatMinutes(mins)}</div>
+      </div>
+    `).join('');
+  }
+
+  // ── STATS TABLE ──
+  const statsEl = el.querySelector('#dash-stats');
+  if (!sorted.length) {
+    statsEl.innerHTML = `<div class="dash-empty">Нет данных.</div>`;
+  } else {
+    // Collect per-item session counts and avg
+    const itemStats = {};
+    allSessions.forEach(s => {
+      if (!itemStats[s.itemName]) itemStats[s.itemName] = { mins: 0, count: 0 };
+      itemStats[s.itemName].mins += s.minutes || 0;
+      itemStats[s.itemName].count++;
+    });
+    statsEl.innerHTML = Object.entries(itemStats)
+      .sort((a,b) => b[1].mins - a[1].mins)
+      .map(([name, d]) => `
+        <div class="stats-card" data-name="${escHtml(name)}">
+          <div class="stats-name">${escHtml(name)}</div>
+          <div class="stats-nums">
+            <div class="stats-num">
+              <div class="stats-num-val">${d.count}</div>
+              <div class="stats-num-lbl">сессий</div>
+            </div>
+            <div class="stats-num">
+              <div class="stats-num-val">${formatMinutes(d.mins)||'—'}</div>
+              <div class="stats-num-lbl">всего</div>
+            </div>
+            <div class="stats-num">
+              <div class="stats-num-val">${d.count ? formatMinutes(Math.round(d.mins/d.count))||'—' : '—'}</div>
+              <div class="stats-num-lbl">среднее</div>
+            </div>
+          </div>
+          <div class="arrow">›</div>
+        </div>
+      `).join('');
+
+    // Wire click on each stats card
+    statsEl.querySelectorAll('.stats-card').forEach(card => {
+      card.onclick = () => openDetailScreen(card.dataset.name, allSessions);
+    });
+  }
+
+  // ── CALENDAR HEATMAP ──
+  renderCalendar(el.querySelector('#dash-calendar'), allSessions);
+}
+
+function renderCalendar(container, sessions) {
+  // Last 16 weeks (112 days)
+  const WEEKS = 16;
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Build day→minutes map
+  const dayMap = {};
+  sessions.forEach(s => {
+    const d = new Date(s.date); d.setHours(0,0,0,0);
+    const key = d.getTime();
+    dayMap[key] = (dayMap[key] || 0) + (s.minutes || 0);
+  });
+  const maxMins = Math.max(...Object.values(dayMap), 1);
+
+  // Start from Sunday of 16 weeks ago
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - (WEEKS * 7 - 1));
+
+  // Build columns (weeks)
+  const grid = document.createElement('div');
+  grid.className = 'calendar-grid';
+
+  let curDate = new Date(startDate);
+  let lastMonth = -1;
+  const monthLabels = document.createElement('div');
+  monthLabels.className = 'cal-month-labels';
+
+  for (let w = 0; w < WEEKS; w++) {
+    const col = document.createElement('div');
+    col.className = 'cal-col';
+
+    for (let d = 0; d < 7; d++) {
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+      const key = new Date(curDate).setHours(0,0,0,0);
+      const mins = dayMap[key] || 0;
+
+      if (mins > 0) {
+        const intensity = Math.min(mins / maxMins, 1);
+        const alpha = 0.2 + intensity * 0.8;
+        cell.style.background = `rgba(124, 106, 255, ${alpha.toFixed(2)})`;
+      }
+
+      const dateStr = curDate.toLocaleDateString('ru', { day: 'numeric', month: 'short' });
+      cell.title = `${dateStr}${mins ? ': ' + formatMinutes(mins) : ''}`;
+
+      col.appendChild(cell);
+      curDate.setDate(curDate.getDate() + 1);
+    }
+
+    grid.appendChild(col);
+  }
+
+  container.innerHTML = '';
+  container.appendChild(grid);
+}
+
+
+function openWsOverlay() { renderWsList(); openOverlay('ws-overlay'); }
+
+function renderWsList() {
+  const list = document.getElementById('ws-list');
+  list.innerHTML = '';
+  root.workspaces.forEach(ws => {
+    const isActive = ws.id === root.activeWsId;
+    const el = document.createElement('div');
+    el.style.cssText = `display:flex;align-items:center;gap:10px;background:${isActive?'var(--surface3)':'var(--surface2)'};border:1px solid ${isActive?'var(--accent)':'var(--border)'};border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;transition:all .15s;margin-bottom:8px;`;
+    el.innerHTML = `
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:${isActive?'var(--accent2)':'var(--text)'};">${escHtml(ws.name)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${ws.items.length} ${pluralActivities(ws.items.length)}</div>
+      </div>
+      ${isActive?'<span style="font-size:16px;color:var(--accent);flex-shrink:0;">✓</span>':''}
+      <button class="ws-rename-btn" style="width:28px;height:28px;border-radius:6px;background:var(--surface3);border:1px solid var(--border);color:var(--text3);cursor:pointer;font-size:13px;flex-shrink:0;">✎</button>
+      ${root.workspaces.length>1?`<button class="ws-del-btn" style="width:28px;height:28px;border-radius:6px;background:transparent;border:1px solid transparent;color:var(--text3);cursor:pointer;font-size:13px;flex-shrink:0;">✕</button>`:''}
+    `;
+    el.onclick = e => {
+      if (e.target.closest('.ws-rename-btn')||e.target.closest('.ws-del-btn')) return;
+      root.activeWsId = ws.id; pathIds = [];
+      save(); render(); closeOverlay('ws-overlay');
+    };
+    el.querySelector('.ws-rename-btn').onclick = e => {
+      e.stopPropagation();
+      const n = prompt('Новое название:', ws.name);
+      if (n && n.trim()) { ws.name = n.trim(); save(); render(); renderWsList(); }
+    };
+    const db = el.querySelector('.ws-del-btn');
+    if (db) db.onclick = e => {
+      e.stopPropagation();
+      if (!confirm(`Удалить "${ws.name}"?`)) return;
+      root.workspaces = root.workspaces.filter(w => w.id !== ws.id);
+      if (root.activeWsId === ws.id) root.activeWsId = root.workspaces[0].id;
+      pathIds = []; save(); render(); renderWsList();
+    };
+    list.appendChild(el);
+  });
+}
+
+document.getElementById('add-ws-btn').onclick = () => {
+  const name = document.getElementById('new-ws-name').value.trim();
+  if (!name) return;
+  const ws = defaultWorkspace(name);
+  root.workspaces.push(ws); root.activeWsId = ws.id;
+  document.getElementById('new-ws-name').value = '';
+  pathIds = []; save(); render(); renderWsList(); closeOverlay('ws-overlay');
+};
+document.getElementById('ws-close').onclick = () => closeOverlay('ws-overlay');
+
+// ── ACTIVITY DETAIL SCREEN ────────────────────────────────────────────────
+let currentDetailState = null; // { itemName, allSessions }
+
+document.getElementById('detail-back-btn').onclick = () => {
+  document.getElementById('detail-screen').classList.remove('open');
+  currentDetailState = null;
+};
+
+function openDetailScreen(itemName, allSessions) {
+  currentDetailState = { itemName, allSessions };
+  renderDetailScreen();
+}
+
+function renderDetailScreen() {
+  if (!currentDetailState) return;
+  const { itemName, allSessions } = currentDetailState;
+  const topItem = activeWs().items.find(i => i.name === itemName);
+  document.getElementById('detail-title').textContent = itemName;
+  document.getElementById('detail-screen').classList.add('open');
+
+  const { from, to } = getPeriodRange();
+  const el = document.getElementById('detail-content');
+  const itemSessions = allSessions.filter(s => s.itemName === itemName);
+
+  // Build sub-activity breakdown
+  const subStats = {};
+  function collectSub(items) {
+    for (const child of items) {
+      if (child.sessions) {
+        child.sessions.filter(s => s.date >= from && s.date <= to).forEach(s => {
+          if (!subStats[child.name]) subStats[child.name] = { mins: 0, count: 0 };
+          subStats[child.name].mins += s.minutes || 0;
+          subStats[child.name].count++;
+        });
+      }
+      if (child.children && child.children.length) collectSub(child.children);
+    }
+  }
+  if (topItem) {
+    if (topItem.sessions) {
+      topItem.sessions.filter(s => s.date >= from && s.date <= to).forEach(s => {
+        if (!subStats[itemName]) subStats[itemName] = { mins: 0, count: 0 };
+        subStats[itemName].mins += s.minutes || 0;
+        subStats[itemName].count++;
+      });
+    }
+    if (topItem.children) collectSub(topItem.children);
+  }
+
+  const subSorted = Object.entries(subStats).sort((a,b) => b[1].mins - a[1].mins);
+  const maxMins = subSorted[0]?.[1].mins || 1;
+  const chronoSessions = [...itemSessions].sort((a,b) => b.date - a.date);
+
+  el.innerHTML = `
+    ${subSorted.length > 1 ? `
+      <div class="dash-section-title">По подактивностям</div>
+      ${subSorted.map(([name, d]) => `
+        <div class="bar-item" style="margin-bottom:14px;">
+          <div class="bar-label" title="${escHtml(name)}">${escHtml(name)}</div>
+          <div style="flex:1;">
+            <div class="bar-track" style="margin-bottom:4px;"><div class="bar-fill" style="width:${Math.round(d.mins/maxMins*100)}%"></div></div>
+            <div style="font-size:11px;color:var(--text3);">${d.count} сессий · ср. ${formatMinutes(d.count ? Math.round(d.mins/d.count) : 0)||'—'}</div>
+          </div>
+          <div class="bar-value">${formatMinutes(d.mins)||'—'}</div>
+        </div>
+      `).join('')}
+    ` : ''}
+
+    <div class="dash-section-title">История сессий</div>
+    ${chronoSessions.length ? `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0 14px;">
+        ${chronoSessions.map((s, idx) => {
+          const dateStr = new Date(s.date).toLocaleDateString('ru', { day:'numeric', month:'short', year:'numeric' });
+          const subName = s.path && s.path !== itemName ? s.path.split(' · ').slice(1).join(' · ') : '';
+          // Read note text from noteId reference (always up to date)
+          let notePreview = '';
+          let hasNote = false;
+          if (s.noteId && s.itemId) {
+            const noteItem = getItem(s.itemId);
+            if (noteItem && noteItem.notes) {
+              const note = noteItem.notes.find(n => n.id === s.noteId);
+              if (note) {
+                // Always read fresh — use bodyHtml stripped of tags, fallback to body
+                notePreview = note.bodyHtml
+                  ? note.bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120)
+                  : (note.body || '').slice(0, 120);
+                hasNote = true;
+              }
+            }
+          }
+          return `
+            <div class="session-item${hasNote ? ' has-note' : ''}" data-idx="${idx}" style="${hasNote ? 'cursor:pointer;' : 'cursor:default;'}">
+              <div class="session-date">${dateStr}</div>
+              <div class="session-body">
+                ${subName ? `<div class="session-sub">${escHtml(subName)}</div>` : ''}
+                ${notePreview ? `<div class="session-note">${escHtml(notePreview)}${notePreview.length >= 120 ? '…' : ''}</div>` : ''}
+                ${!subName && !notePreview ? `<div style="font-size:13px;color:var(--text3);">Занятие</div>` : ''}
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                <div class="session-time">${s.minutes ? formatMinutes(s.minutes) : '—'}</div>
+                ${hasNote ? `<span style="font-size:14px;color:var(--text3);">›</span>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    ` : '<div class="dash-empty">Нет сессий за этот период.</div>'}
+
+    <div class="dash-section-title">Календарь</div>
+    <div class="calendar-wrap"><div id="detail-calendar"></div></div>
+  `;
+
+  renderCalendar(el.querySelector('#detail-calendar'), itemSessions);
+
+  // Wire session item clicks
+  el.querySelectorAll('.session-item[data-idx]').forEach(el2 => {
+    const s = chronoSessions[parseInt(el2.dataset.idx)];
+    if (!s || !s.noteId) return;
+    el2.onclick = () => openSessionNote(s, itemName);
+  });
+}
+
+let currentSessionNoteRef = null;
+
+function openSessionNote(s, itemName) {
+  const dateStr = new Date(s.date).toLocaleDateString('ru', { day:'numeric', month:'long', year:'numeric' });
+  const subName = s.path && s.path !== itemName ? s.path.split(' · ').slice(1).join(' · ') : '';
+  document.getElementById('session-note-title').textContent = subName || itemName;
+  document.getElementById('session-note-meta').textContent =
+    `${dateStr}${s.minutes ? ' · ' + formatMinutes(s.minutes) : ''}`;
+
+  currentSessionNoteRef = null;
+  const openBtn = document.getElementById('session-note-open');
+
+  // Always read note live from noteId
+  if (s.noteId && s.itemId) {
+    const noteItem = getItem(s.itemId);
+    const note = noteItem && noteItem.notes ? noteItem.notes.find(n => n.id === s.noteId) : null;
+    if (note) {
+      document.getElementById('session-note-body').innerHTML = note.bodyHtml || escHtml(note.body || '');
+      currentSessionNoteRef = { noteId: s.noteId, itemId: s.itemId };
+      openBtn.style.display = '';
+    } else {
+      document.getElementById('session-note-body').innerHTML = '<em style="color:var(--text3)">Заметка не найдена</em>';
+      openBtn.style.display = 'none';
+    }
+  } else {
+    document.getElementById('session-note-body').innerHTML = '';
+    openBtn.style.display = 'none';
+  }
+
+  openOverlay('session-note-overlay');
+}
+
+document.getElementById('session-note-close').onclick = () => closeOverlay('session-note-overlay');
+document.getElementById('session-note-open').onclick = () => {
+  if (!currentSessionNoteRef) return;
+  closeOverlay('session-note-overlay');
+  // Open the notes screen for the item, then open the specific note
+  notesItemId = currentSessionNoteRef.itemId;
+  const item = getItem(notesItemId);
+  if (!item) return;
+  document.getElementById('notes-screen-title').textContent = item.name;
+  renderNotesList();
+  updatePageBtns();
+  document.getElementById('notes-screen').classList.add('open');
+  // Open the specific note in editor
+  setTimeout(() => openNoteEditor(currentSessionNoteRef.noteId), 300);
+};
+
+// ── STORAGE PERSISTENCE ───────────────────────────────────────────────────
+async function initStoragePersistence() {
+  const titleEl = document.getElementById('persist-status-title');
+  const descEl  = document.getElementById('persist-status-desc');
+  const iconEl  = document.getElementById('persist-status-icon');
+
+  if (!navigator.storage || !navigator.storage.persist) {
+    iconEl.textContent = '⚠️';
+    titleEl.textContent = 'Постоянное хранилище не поддерживается';
+    descEl.textContent  = 'Браузер может удалить данные при нехватке места.';
+    return;
+  }
+
+  const already = await navigator.storage.persisted();
+  if (already) {
+    iconEl.textContent  = '🔒';
+    titleEl.textContent = 'Хранилище защищено';
+    descEl.textContent  = 'Браузер не удалит данные автоматически.';
+    titleEl.style.color = '#6bdd6b';
+    return;
+  }
+
+  const granted = await navigator.storage.persist();
+  if (granted) {
+    iconEl.textContent  = '🔒';
+    titleEl.textContent = 'Хранилище защищено';
+    descEl.textContent  = 'Разрешение получено. Браузер не удалит данные.';
+    titleEl.style.color = '#6bdd6b';
+  } else {
+    iconEl.textContent  = '⚠️';
+    titleEl.textContent = 'Хранилище не защищено';
+    descEl.textContent  = 'Браузер может очистить данные. Рекомендуется регулярный бэкап.';
+    titleEl.style.color = '#e09050';
+  }
+}
+
+// ── GITHUB GIST BACKUP ────────────────────────────────────────────────────
+const GIST_FILENAME = 'lifeflow-backup.json';
+
+function renderSyncModal() {
+  const meta = loadBackupMeta();
+  const tokenInput = document.getElementById('gist-token-input');
+  const tokenStatus = document.getElementById('gist-token-status');
+  const metaBlock = document.getElementById('gist-meta-block');
+  const backupBtn = document.getElementById('gist-backup-btn');
+  const restoreBtn = document.getElementById('gist-restore-btn');
+
+  const hasToken = !!(meta.token);
+  tokenInput.value = hasToken ? '••••••••••••••••' : '';
+  tokenInput.placeholder = hasToken ? 'Токен сохранён (введи новый для замены)' : 'ghp_xxxxxxxxxxxx';
+
+  if (hasToken) {
+    tokenStatus.textContent = '✅ Токен сохранён на этом устройстве';
+    tokenStatus.style.color = '#6bdd6b';
+    backupBtn.disabled = false;
+    restoreBtn.disabled = false;
+  } else {
+    tokenStatus.textContent = 'Токен хранится только локально и никогда не экспортируется.';
+    tokenStatus.style.color = '';
+    backupBtn.disabled = true;
+    restoreBtn.disabled = true;
+  }
+
+  if (meta.lastBackupDate) {
+    const d = new Date(meta.lastBackupDate);
+    const fmt = d.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    document.getElementById('gist-last-backup-line').textContent = `Последний бэкап: ${fmt}`;
+    if (meta.gistId) {
+      document.getElementById('gist-id-line').innerHTML = `Gist: <a href="https://gist.github.com/${meta.gistId}" target="_blank" rel="noopener" style="color:var(--accent2);">${meta.gistId.slice(0,8)}…</a>`;
+    } else {
+      document.getElementById('gist-id-line').textContent = '';
+    }
+    metaBlock.style.display = '';
+  } else {
+    metaBlock.style.display = 'none';
+  }
+}
+
+document.getElementById('gist-token-save').onclick = () => {
+  const raw = document.getElementById('gist-token-input').value.trim();
+  if (!raw || raw.startsWith('•')) { showGistStatus('Введи токен', '#e09050'); return; }
+  const meta = loadBackupMeta();
+  meta.token = raw;
+  saveBackupMeta(meta);
+  renderSyncModal();
+  showGistStatus('✅ Токен сохранён', '#6bdd6b');
+};
+
+function showGistStatus(msg, color, persistent) {
+  const el = document.getElementById('gist-status');
+  el.textContent = msg; el.style.color = color || 'var(--text3)'; el.style.display = '';
+  if (!persistent) setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+async function backupToGist() {
+  const meta = loadBackupMeta();
+  if (!meta.token) { showGistStatus('❌ Сначала сохрани токен', '#ff7070'); return; }
+
+  const backupBtn = document.getElementById('gist-backup-btn');
+  backupBtn.disabled = true; backupBtn.textContent = '⏳ Сохранение…';
+  showGistStatus('Соединение с GitHub…', '', true);
+
+  try {
+    const content = JSON.stringify(root, null, 2); // no BACKUP_KEY
+    const body = { description: 'LifeFlow Backup', public: false, files: { [GIST_FILENAME]: { content } } };
+
+    let gistId = meta.gistId;
+
+    // Try to verify existing gist still exists
+    if (gistId) {
+      const check = await fetch(`https://api.github.com/gists/${gistId}`, {
+        headers: { Authorization: `Bearer ${meta.token}`, Accept: 'application/vnd.github+json' }
+      });
+      if (!check.ok) gistId = null; // gist deleted or inaccessible
+    }
+
+    // If no gistId, search existing gists for our filename
+    if (!gistId) {
+      const listRes = await fetch('https://api.github.com/gists?per_page=100', {
+        headers: { Authorization: `Bearer ${meta.token}`, Accept: 'application/vnd.github+json' }
+      });
+      if (listRes.ok) {
+        const gists = await listRes.json();
+        const found = gists.find(g => g.files && g.files[GIST_FILENAME]);
+        if (found) gistId = found.id;
+      }
+    }
+
+    let res;
+    if (gistId) {
+      res = await fetch(`https://api.github.com/gists/${gistId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${meta.token}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' },
+        body: JSON.stringify({ description: 'LifeFlow Backup', files: { [GIST_FILENAME]: { content } } })
+      });
+    } else {
+      res = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${meta.token}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' },
+        body: JSON.stringify(body)
+      });
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    meta.gistId = data.id;
+    meta.lastBackupDate = Date.now();
+    saveBackupMeta(meta);
+    renderSyncModal();
+    renderBackupReminder();
+    showGistStatus('✅ Бэкап сохранён в Gist', '#6bdd6b');
+  } catch (e) {
+    showGistStatus('❌ Ошибка: ' + e.message, '#ff7070');
+  } finally {
+    backupBtn.disabled = false; backupBtn.textContent = '☁️ Сделать бэкап';
+  }
+}
+
+async function restoreFromGist() {
+  const meta = loadBackupMeta();
+  if (!meta.token) { showGistStatus('❌ Сначала сохрани токен', '#ff7070'); return; }
+
+  const restoreBtn = document.getElementById('gist-restore-btn');
+  restoreBtn.disabled = true; restoreBtn.textContent = '⏳ Загрузка…';
+  showGistStatus('Загрузка из GitHub…', '', true);
+
+  try {
+    let gistId = meta.gistId;
+
+    // Search if no stored ID
+    if (!gistId) {
+      const listRes = await fetch('https://api.github.com/gists?per_page=100', {
+        headers: { Authorization: `Bearer ${meta.token}`, Accept: 'application/vnd.github+json' }
+      });
+      if (!listRes.ok) throw new Error(`HTTP ${listRes.status}`);
+      const gists = await listRes.json();
+      const found = gists.find(g => g.files && g.files[GIST_FILENAME]);
+      if (!found) throw new Error('Бэкап не найден в твоих Gist');
+      gistId = found.id;
+    }
+
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: { Authorization: `Bearer ${meta.token}`, Accept: 'application/vnd.github+json' }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    const fileData = data.files && data.files[GIST_FILENAME];
+    if (!fileData) throw new Error(`Файл ${GIST_FILENAME} не найден в Gist`);
+
+    // Fetch raw content (may be truncated in gist API)
+    let content = fileData.content;
+    if (fileData.truncated && fileData.raw_url) {
+      const raw = await fetch(fileData.raw_url);
+      content = await raw.text();
+    }
+
+    const imported = JSON.parse(content);
+    if (!imported.workspaces) throw new Error('Неверный формат бэкапа');
+
+    if (!confirm('Восстановить данные из Gist? Текущие данные будут заменены.')) {
+      showGistStatus('Отменено', '');
+      return;
+    }
+
+    root = imported;
+    save(); render();
+    meta.gistId = gistId;
+    saveBackupMeta(meta);
+    closeOverlay('sync-overlay');
+    showGistStatus('✅ Данные восстановлены', '#6bdd6b');
+  } catch (e) {
+    showGistStatus('❌ Ошибка: ' + e.message, '#ff7070');
+  } finally {
+    restoreBtn.disabled = false; restoreBtn.textContent = '⬇ Восстановить';
+  }
+}
+
+document.getElementById('gist-backup-btn').onclick  = backupToGist;
+document.getElementById('gist-restore-btn').onclick = restoreFromGist;
+
+// ── BACKUP REMINDER BANNER ─────────────────────────────────────────────────
+function renderBackupReminder() {
+  const bar = document.getElementById('backup-reminder-bar');
+  const meta = loadBackupMeta();
+  const now = Date.now();
+  const DAY = 86400000;
+  const THRESHOLD = 7 * DAY;
+
+  // Snoozed?
+  if (meta.remindAfter && now < meta.remindAfter) { bar.style.display = 'none'; return; }
+
+  const lastExport = meta.lastExportDate || 0;
+  const lastGist   = meta.lastBackupDate || 0;
+  const lastAny    = Math.max(lastExport, lastGist);
+
+  // Show if never backed up OR more than 7 days ago
+  const shouldShow = (lastAny === 0) || (now - lastAny > THRESHOLD);
+
+  if (!shouldShow) { bar.style.display = 'none'; return; }
+
+  const textEl = document.getElementById('backup-reminder-text');
+  if (lastAny === 0) {
+    textEl.textContent = 'Ты ещё ни разу не делал бэкап. Сохрани данные, чтобы не потерять их.';
+  } else {
+    const days = Math.floor((now - lastAny) / DAY);
+    textEl.textContent = `Последнее сохранение было ${days} ${days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'} назад.`;
+  }
+
+  bar.style.display = '';
+}
+
+document.getElementById('reminder-export-btn').onclick = () => {
+  doExport();
+  renderBackupReminder();
+};
+
+document.getElementById('reminder-gist-btn').onclick = () => {
+  closeOverlay('sync-overlay'); // make sure closed
+  renderSyncModal();
+  openOverlay('sync-overlay');
+  // Auto-trigger backup if token exists
+  const meta = loadBackupMeta();
+  if (meta.token) { setTimeout(backupToGist, 400); }
+};
+
+document.getElementById('reminder-snooze-btn').onclick = () => {
+  const meta = loadBackupMeta();
+  meta.remindAfter = Date.now() + 3 * 86400000; // 3 days
+  saveBackupMeta(meta);
+  renderBackupReminder();
+};
+
+document.getElementById('reminder-dismiss-btn').onclick = () => {
+  // Snooze for 1 day on plain dismiss
+  const meta = loadBackupMeta();
+  meta.remindAfter = Date.now() + 86400000;
+  saveBackupMeta(meta);
+  renderBackupReminder();
+};
+
+// Open sync modal — init persistence check and token UI
+document.getElementById('sync-btn').onclick = () => {
+  renderSyncModal();
+  initStoragePersistence();
+  openOverlay('sync-overlay');
+};
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+render();
+renderBackupReminder();
+// Request storage persistence silently on startup
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(() => {});
+}
+</script>
+</body>
+</html>
